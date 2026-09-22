@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>再来院フォロー帳</title>
+<style>
+  :root {
+    --ink: #1d2733; --sub: #5b6b7c; --line: #dfe5ec; --bg: #f5f7fa; --card: #fff;
+    --main: #0f6e6e; --main-soft: #e3f3f2; --accent: #d9662b; --accent-soft: #fdeee5;
+    --warn: #b7791f; --warn-soft: #fdf6e3; --gray-soft: #eef1f4;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif; font-size: 15px; line-height: 1.6; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 20px 16px 60px; }
+  header h1 { font-size: 26px; margin: 8px 0 4px; letter-spacing: .02em; }
+  header p { margin: 0; color: var(--sub); }
+  .badge { display: inline-block; background: var(--sub); color: #fff; border-radius: 999px;
+    font-size: 12px; padding: 1px 10px; margin-left: 6px; vertical-align: 6px; font-weight: 500; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-top: 18px; }
+  .card h2 { font-size: 18px; margin: 0 0 4px; }
+  .card .hint { color: var(--sub); font-size: 13px; margin: 0 0 12px; }
+  select, input[type=text], input[type=number], input[type=date], textarea {
+    font: inherit; color: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: #fff; width: 100%; min-width: 0; }
+  input[type=number] { text-align: right; }
+  textarea { resize: vertical; line-height: 1.7; }
+  select:focus, input:focus, textarea:focus { outline: 2px solid var(--main); outline-offset: 0; border-color: var(--main); }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 8px 14px; color: var(--ink); }
+  button.primary { background: var(--main); border-color: var(--main); color: #fff; font-weight: 600; }
+  button.accent { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+  button.small { padding: 4px 10px; font-size: 13px; }
+  button.link { border: 0; background: none; color: var(--main); padding: 0; text-decoration: underline; }
+  .settings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .settings label { font-size: 12px; color: var(--sub); display: block; }
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .stat { border-radius: 10px; padding: 14px; background: var(--main-soft); }
+  .stat.accent { background: var(--accent-soft); }
+  .stat.warn { background: var(--warn-soft); }
+  .stat.gray { background: var(--gray-soft); }
+  .stat .label { font-size: 12px; color: var(--sub); }
+  .stat .num { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .stat .num small { font-size: 13px; font-weight: 500; margin-left: 2px; }
+  .stat .sub { font-size: 12px; color: var(--sub); }
+  .stat.accent .num { color: var(--accent); }
+  .stat.warn .num { color: var(--warn); }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .tabs button { border-radius: 999px; padding: 5px 14px; font-size: 13px; }
+  .tabs button.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.list th { text-align: left; font-size: 12px; color: var(--sub); font-weight: 500; padding: 6px; border-bottom: 1px solid var(--line); }
+  table.list td { padding: 9px 6px; border-bottom: 1px dashed var(--line); vertical-align: middle; }
+  table.list td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.list tr.sel td { background: var(--main-soft); }
+  table.list tr.done td { color: var(--sub); }
+  .chip { display: inline-block; border-radius: 999px; padding: 1px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .chip.ok { background: var(--main-soft); color: var(--main); }
+  .chip.soon { background: var(--warn-soft); color: var(--warn); }
+  .chip.follow { background: var(--accent-soft); color: var(--accent); }
+  .chip.dormant { background: var(--gray-soft); color: var(--sub); }
+  .contacted { font-size: 12px; color: var(--sub); display: block; }
+  .empty { color: var(--sub); text-align: center; padding: 24px 0; }
+  .msg { display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; }
+  .msg .who { font-size: 20px; font-weight: 700; }
+  .msg dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; margin: 10px 0 0; }
+  .msg dt { color: var(--sub); }
+  .msg dd { margin: 0; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
+  .seg button { border: 0; border-radius: 0; padding: 6px 14px; font-size: 13px; }
+  .seg button.on { background: var(--main); color: #fff; }
+  .msg-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+  .toast { color: var(--main); font-size: 13px; font-weight: 700; }
+  .add { display: grid; grid-template-columns: 1.2fr 1.2fr 1fr .7fr auto; gap: 8px; align-items: end; }
+  .add label { font-size: 12px; color: var(--sub); }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--main); font-weight: 600; }
+  .note { font-size: 12px; color: var(--sub); margin-top: 12px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  footer { margin-top: 24px; font-size: 12px; color: var(--sub); text-align: center; }
+  @media (max-width: 760px) {
+    .settings, .summary { grid-template-columns: 1fr 1fr; }
+    .msg { grid-template-columns: 1fr; }
+    .add { grid-template-columns: 1fr 1fr; }
+    table.list .hide-sp { display: none; }
+    table.list td:first-child { white-space: nowrap; }
+    table.list td, table.list th { padding-left: 4px; padding-right: 4px; }
+    .stat .num { font-size: 22px; }
+  }
+  @media print {
+    body { background: #fff; } .toolbar, button, .tabs, details { display: none !important; }
+    .card { break-inside: avoid; border-color: #bbb; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>再来院フォロー帳<span class="badge">デモ</span></h1>
+    <p>最終来院日から「そろそろ声をかけたい方」を自動で拾い出し、その方に合わせた連絡文まで作ります。</p>
+  </header>
+
+  <section class="card">
+    <h2>院の設定</h2>
+    <p class="hint">連絡文と見込み額の計算に使います。院に合わせて変えられます。</p>
+    <div class="settings">
+      <div><label for="cName">院の名前</label><input id="cName" type="text"></div>
+      <div><label for="cPrice">1回あたりの施術単価（円）</label><input id="cPrice" type="number" min="0" step="500" inputmode="numeric"></div>
+      <div><label for="cFollow">「要フォロー」にする日数</label><input id="cFollow" type="number" min="1" step="1" inputmode="numeric"></div>
+      <div><label for="cDormant">「休眠」にする日数</label><input id="cDormant" type="number" min="2" step="1" inputmode="numeric"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>いま声をかけたい方</h2>
+    <div class="summary">
+      <div class="stat"><div class="label">登録している患者さん</div><div class="num" id="sAll">0<small>人</small></div><div class="sub" id="sAllSub"></div></div>
+      <div class="stat warn"><div class="label">そろそろ</div><div class="num" id="sSoon">0<small>人</small></div><div class="sub" id="sSoonSub"></div></div>
+      <div class="stat accent"><div class="label">要フォロー（未連絡）</div><div class="num" id="sFollow">0<small>人</small></div><div class="sub" id="sFollowSub"></div></div>
+      <div class="stat gray"><div class="label">要フォロー・休眠の方が1回ずつ戻ると</div><div class="num" id="sLost">0<small>円</small></div><div class="sub" id="sLostSub"></div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>患者さん一覧</h2>
+    <p class="hint">声をかける優先度の高い順に並んでいます（状態 → 来院回数の多い方）。行を選ぶと、下に連絡文が出ます。</p>
+    <div class="tabs" id="tabs"></div>
+    <table class="list">
+      <thead><tr><th>お名前</th><th class="hide-sp">主な症状・メニュー</th><th class="hide-sp">最終来院</th><th class="n">経過</th><th class="n hide-sp">来院回数</th><th>状態</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <details>
+      <summary>＋ 患者さんを追加する</summary>
+      <div class="add" style="margin-top:10px">
+        <div><label for="aName">お名前</label><input id="aName" type="text" placeholder="例）山田 太郎"></div>
+        <div><label for="aMenu">主な症状・メニュー</label><input id="aMenu" type="text" placeholder="例）腰痛"></div>
+        <div><label for="aLast">最終来院日</label><input id="aLast" type="date"></div>
+        <div><label for="aVisits">来院回数</label><input id="aVisits" type="number" min="1" step="1" inputmode="numeric" value="1"></div>
+        <button class="primary" id="addBtn" type="button">追加</button>
+      </div>
+    </details>
+    <details>
+      <summary>＋ 予約システムの一覧をまとめて取り込む（貼り付け）</summary>
+      <p class="hint" style="margin-top:8px">1行に1人、「お名前, 症状・メニュー, 最終来院日, 来院回数」の順でカンマ区切り。Excelからコピーしたもの（タブ区切り）でも読めます。</p>
+      <textarea id="csv" rows="4" placeholder="山田 太郎, 腰痛, 2026-08-01, 6"></textarea>
+      <div class="msg-actions"><button class="primary" id="csvBtn" type="button">取り込む</button><span class="toast" id="csvMsg"></span></div>
+    </details>
+  </section>
+
+  <section class="card" id="msgCard">
+    <h2>連絡文</h2>
+    <div id="msgEmpty" class="empty">上の一覧から、声をかけたい方を選んでください。</div>
+    <div class="msg" id="msgBody" hidden>
+      <div>
+        <div class="who" id="mWho"></div>
+        <dl id="mInfo"></dl>
+      </div>
+      <div>
+        <div class="seg" id="styleSeg"></div>
+        <textarea id="mText" rows="9" aria-label="連絡文"></textarea>
+        <div class="msg-actions">
+          <button class="primary" id="copyBtn" type="button">文面をコピー</button>
+          <button id="doneBtn" type="button">連絡済みにする</button>
+          <span class="toast" id="mToast"></span>
+        </div>
+        <p class="note">文面は自由に書き換えられます。送る前に、内容が合っているかを必ずご確認ください。</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <button id="sample" type="button">サンプルデータに戻す</button>
+    <button id="clear" type="button">患者さんをすべて消す</button>
+    <button id="print" type="button">一覧を印刷</button>
+  </div>
+
+  <footer>
+    入力した内容は、この端末のブラウザの中だけに保存されます。外部には一切送信されません。<br>
+    表示している患者さんはすべて架空のサンプルです。<br>
+    © 合同会社ウルノワ ／ 無断での転載・再配布はご遠慮ください。
+  </footer>
+</div>
+
+<script>
+"use strict";
+const STORE_KEY = "clinic-followup-v1";
+const STATUS = {
+  ok: { label: "通院中", order: 3 },
+  soon: { label: "そろそろ", order: 1 },
+  follow: { label: "要フォロー", order: 0 },
+  dormant: { label: "休眠", order: 2 }
+};
+// 連絡してからこの日数は「連絡済み」として優先度を下げる
+const CONTACT_COOLDOWN = 21;
+const DEFAULT_CFG = { name: "さくら整骨院", price: 5000, soon: 14, follow: 30, dormant: 90 };
+// サンプル: [お名前, 症状・メニュー, 何日前に最終来院, 来院回数]
+const SAMPLE = [
+  ["佐藤 美咲", "肩こり・頭痛", 41, 12], ["鈴木 健一", "腰痛", 35, 8], ["高橋 由美", "産後の骨盤矯正", 52, 5],
+  ["田中 翔", "スポーツ後のケア", 18, 3], ["伊藤 恵子", "膝の痛み", 120, 15], ["渡辺 大輔", "ぎっくり腰", 64, 2],
+  ["山本 さおり", "肩こり・頭痛", 9, 20], ["中村 拓也", "腰痛", 22, 6], ["小林 直子", "首の痛み", 97, 4],
+  ["加藤 誠", "姿勢矯正", 5, 9], ["吉田 春香", "産後の骨盤矯正", 33, 7], ["山口 隆", "膝の痛み", 180, 3]
+];
+
+// ---- 純粋関数 ----
+const parseDate = s => {
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(s || "").trim().replace(/\//g, "-"));
+  if (!m) return NaN;
+  const t = Date.UTC(+m[1], +m[2] - 1, +m[3]), d = new Date(t);
+  return d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3] ? t : NaN;
+};
+const ymd = t => new Date(t).toISOString().slice(0, 10);
+const daysBetween = (from, to) => Math.round((parseDate(to) - parseDate(from)) / 86400000);
+const todayStr = () => { const d = new Date(); return ymd(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); };
+const addDays = (s, n) => ymd(parseDate(s) + n * 86400000);
+const yen = n => Math.round(n).toLocaleString("ja-JP");
+
+function statusOf(p, today, cfg) {
+  const d = daysBetween(p.last, today);
+  if (d >= cfg.dormant) return "dormant";
+  if (d >= cfg.follow) return "follow";
+  if (d >= cfg.soon) return "soon";
+  return "ok";
+}
+function isContacted(p, today) {
+  return !!p.contacted && daysBetween(p.contacted, today) < CONTACT_COOLDOWN && parseDate(p.contacted) >= parseDate(p.last);
+}
+// 声をかける優先度の高い順: 未連絡 → 状態 → 来院回数の多い方 → 経過日数の長い方
+function sortPatients(list, today, cfg) {
+  return list.map(p => ({ p, st: statusOf(p, today, cfg), days: daysBetween(p.last, today), done: isContacted(p, today) }))
+    .sort((a, b) => (a.done - b.done) || (STATUS[a.st].order - STATUS[b.st].order) || (b.p.visits - a.p.visits) || (b.days - a.days));
+}
+function summarize(list, today, cfg) {
+  const r = { all: list.length, ok: 0, soon: 0, follow: 0, dormant: 0, followOpen: 0, contacted: 0 };
+  for (const p of list) {
+    const st = statusOf(p, today, cfg);
+    r[st]++;
+    if (isContacted(p, today)) r.contacted++;
+    else if (st === "follow") r.followOpen++;
+  }
+  r.lost = (r.follow + r.dormant) * cfg.price;
+  return r;
+}
+const surname = name => String(name || "").trim().split(/[\s　]+/)[0] || "";
+function span(days) {
+  if (days < 14) return days + "日";
+  if (days < 60) return Math.round(days / 7) + "週間";
+  return Math.round(days / 30) + "か月";
+}
+function buildMessage(p, today, cfg, style) {
+  const st = statusOf(p, today, cfg), days = daysBetween(p.last, today);
+  const who = surname(p.name) + "様", clinic = cfg.name || "当院", menu = p.menu || "お体";
+  if (style === "line") {
+    const open = {
+      soon: `前回のご来院から${span(days)}ほど経ちました。${menu}の具合はいかがですか？`,
+      follow: `しばらくお会いできていなかったので、ご連絡しました。その後、${menu}の具合はいかがですか？`,
+      dormant: `ご無沙汰しております。${menu}のその後が気になり、ご連絡しました。`,
+      ok: `先日はご来院ありがとうございました。${menu}の具合はいかがですか？`
+    }[st];
+    const close = st === "dormant"
+      ? "また気になることがあれば、いつでもお気軽にご相談ください。"
+      : "ご都合のよい日があれば、このメッセージにご返信いただければご予約をお取りします。";
+    return `${who}\nこんにちは、${clinic}です。\n${open}\n${close}`;
+  }
+  const body = {
+    soon: `前回お越しいただいてから${span(days)}ほどが経ちました。${menu}のその後の具合はいかがでしょうか。\n症状が落ち着いているうちに一度状態を確認しておくと、ぶり返しを防ぎやすくなります。`,
+    follow: `しばらくお顔を拝見できておりませんでしたので、ご連絡を差し上げました。\n${menu}の具合はいかがでしょうか。お忙しい時期かと存じますが、無理をされていないか気にかかっております。`,
+    dormant: `以前は${menu}の施術で${p.visits}回ほどお越しいただき、ありがとうございました。\n季節の変わり目は体調を崩しやすい時期です。その後お変わりなくお過ごしでしょうか。`,
+    ok: `先日はご来院いただき、ありがとうございました。\n${menu}のその後の具合はいかがでしょうか。`
+  }[st];
+  const greet = st === "dormant" ? "ご無沙汰しております。" : "いつもお世話になっております。";
+  return `${who}\n\n${greet}${clinic}です。\n${body}\n\n` +
+    `ご都合のよい日時がございましたら、お電話またはこのメッセージへのご返信でお知らせください。\n` +
+    `${who}が毎日を楽に過ごせるよう、スタッフ一同お待ちしております。\n\n${clinic}`;
+}
+function parseImport(text) {
+  const out = [], bad = [];
+  String(text || "").split(/\r?\n/).forEach((line, i) => {
+    if (!line.trim()) return;
+    const f = line.split(/\t|,|、/).map(s => s.trim());
+    const last = f[2] ? f[2].replace(/\//g, "-") : "";
+    if (!f[0] || !Number.isFinite(parseDate(last))) { bad.push(i + 1); return; }
+    const v = parseInt(f[3], 10);
+    out.push({ name: f[0], menu: f[1] || "", last: ymd(parseDate(last)), visits: v > 0 ? v : 1, contacted: "" });
+  });
+  return { out, bad };
+}
+function samplePatients(today) {
+  return SAMPLE.map(([name, menu, ago, visits]) => ({ name, menu, last: addDays(today, -ago), visits, contacted: "" }));
+}
+
+// ---- 画面 ----
+let state = null, selected = -1, filter = "need", style = "line";
+const $ = id => document.getElementById(id);
+function el(tag, props, children) {
+  const e = document.createElement(tag);
+  Object.assign(e, props || {});
+  (children || []).forEach(c => e.append(c));
+  return e;
+}
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (s && Array.isArray(s.patients) && s.cfg) return s;
+  } catch (e) {}
+  return null;
+}
+function cfg() {
+  const c = state.cfg, n = (v, d) => { const x = Number(v); return Number.isFinite(x) && x > 0 ? x : d; };
+  const soon = n(c.soon, DEFAULT_CFG.soon), follow = Math.max(soon + 1, n(c.follow, DEFAULT_CFG.follow));
+  return { name: c.name, price: n(c.price, 0), soon, follow, dormant: Math.max(follow + 1, n(c.dormant, DEFAULT_CFG.dormant)) };
+}
+function setStat(id, value, unit) { $(id).replaceChildren(value, el("small", { textContent: unit })); }
+
+const TABS = [["need", "声をかけたい方"], ["follow", "要フォロー"], ["soon", "そろそろ"], ["dormant", "休眠"], ["ok", "通院中"], ["all", "すべて"]];
+function render() {
+  const today = todayStr(), c = cfg(), r = summarize(state.patients, today, c);
+  setStat("sAll", r.all, "人"); $("sAllSub").textContent = "通院中 " + r.ok + "人";
+  setStat("sSoon", r.soon, "人"); $("sSoonSub").textContent = "最終来院から" + c.soon + "〜" + (c.follow - 1) + "日";
+  setStat("sFollow", r.followOpen, "人"); $("sFollowSub").textContent = c.follow + "〜" + (c.dormant - 1) + "日 ／ 連絡済み " + r.contacted + "人";
+  setStat("sLost", yen(r.lost), "円"); $("sLostSub").textContent = (r.follow + r.dormant) + "人 × 単価 " + yen(c.price) + "円";
+
+  $("tabs").replaceChildren(...TABS.map(([k, label]) => {
+    const b = el("button", { type: "button", textContent: label, className: k === filter ? "on" : "" });
+    b.addEventListener("click", () => { filter = k; render(); });
+    return b;
+  }));
+  const rows = sortPatients(state.patients, today, c).filter(x =>
+    filter === "all" ? true : filter === "need" ? x.st !== "ok" : x.st === filter);
+  $("rows").replaceChildren(...(rows.length ? rows.map(x => {
+    const i = state.patients.indexOf(x.p);
+    const stCell = el("td", {}, [el("span", { className: "chip " + x.st, textContent: STATUS[x.st].label })]);
+    if (x.done) stCell.append(el("span", { className: "contacted", textContent: "連絡済み（" + (daysBetween(x.p.contacted, today) ? daysBetween(x.p.contacted, today) + "日前" : "今日") + "）" }));
+    const pick = el("button", { type: "button", className: "small" + (x.st === "ok" ? "" : " primary"), textContent: "連絡文" });
+    const del = el("button", { type: "button", className: "small hide-sp", textContent: "削除", ariaLabel: x.p.name + "さんを削除" });
+    pick.addEventListener("click", () => { selected = i; render(); $("msgCard").scrollIntoView({ behavior: "smooth", block: "start" }); });
+    del.addEventListener("click", () => {
+      if (!confirm(x.p.name + "さんを一覧から削除します。よろしいですか？")) return;
+      state.patients.splice(i, 1); selected = selected === i ? -1 : selected > i ? selected - 1 : selected; save(); render();
+    });
+    return el("tr", { className: (i === selected ? "sel " : "") + (x.done ? "done" : "") }, [
+      el("td", { textContent: x.p.name }), el("td", { className: "hide-sp", textContent: x.p.menu }),
+      el("td", { className: "hide-sp", textContent: x.p.last.slice(5).replace("-", "/") }), el("td", { className: "n", textContent: x.days + "日" }),
+      el("td", { className: "n hide-sp", textContent: x.p.visits + "回" }), stCell,
+      el("td", { className: "n" }, [pick, " ", del])]);
+  }) : [el("tr", {}, [el("td", { colSpan: 7, className: "empty", textContent: "該当する患者さんはいません。" })])]));
+  renderMsg(today, c);
+}
+
+function renderMsg(today, c) {
+  const p = state.patients[selected];
+  $("msgEmpty").hidden = !!p; $("msgBody").hidden = !p;
+  if (!p) return;
+  const st = statusOf(p, today, c);
+  $("mWho").textContent = p.name + " 様";
+  const info = [["状態", STATUS[st].label], ["最終来院", p.last.replace(/-/g, "/") + "（" + daysBetween(p.last, today) + "日前）"],
+    ["来院回数", p.visits + "回"], ["症状・メニュー", p.menu || "―"], ["最後の連絡", p.contacted ? p.contacted.replace(/-/g, "/") : "まだ"]];
+  $("mInfo").replaceChildren(...info.flatMap(([k, v]) => [el("dt", { textContent: k }), el("dd", { textContent: v })]));
+  $("styleSeg").replaceChildren(...[["line", "LINE・SMS（短め）"], ["letter", "はがき・メール（丁寧）"]].map(([k, label]) => {
+    const b = el("button", { type: "button", textContent: label, className: k === style ? "on" : "" });
+    b.addEventListener("click", () => { style = k; render(); });
+    return b;
+  }));
+  $("mText").value = buildMessage(p, today, c, style);
+  $("mText").rows = style === "line" ? 6 : 12;
+  $("mToast").textContent = "";
+}
+
+function init() {
+  const today = todayStr();
+  state = load() || { cfg: Object.assign({}, DEFAULT_CFG), patients: samplePatients(today) };
+  const bind = (id, key) => {
+    $(id).value = state.cfg[key];
+    $(id).addEventListener("input", () => { state.cfg[key] = $(id).value; save(); render(); });
+  };
+  bind("cName", "name"); bind("cPrice", "price"); bind("cFollow", "follow"); bind("cDormant", "dormant");
+  $("aLast").value = addDays(today, -30);
+  $("addBtn").addEventListener("click", () => {
+    const name = $("aName").value.trim(), last = $("aLast").value;
+    if (!name || !Number.isFinite(parseDate(last))) { alert("お名前と最終来院日を入れてください。"); return; }
+    state.patients.push({ name, menu: $("aMenu").value.trim(), last, visits: Math.max(1, parseInt($("aVisits").value, 10) || 1), contacted: "" });
+    $("aName").value = ""; $("aMenu").value = ""; filter = "all"; save(); render();
+  });
+  $("csvBtn").addEventListener("click", () => {
+    const { out, bad } = parseImport($("csv").value);
+    state.patients.push(...out); save(); filter = "all"; render();
+    $("csvMsg").textContent = out.length + "人を取り込みました" + (bad.length ? "（読めなかった行: " + bad.join(", ") + "行目）" : "");
+    if (out.length) $("csv").value = "";
+  });
+  $("copyBtn").addEventListener("click", async () => {
+    const t = $("mText");
+    try { await navigator.clipboard.writeText(t.value); } catch (e) { t.select(); document.execCommand("copy"); }
+    $("mToast").textContent = "コピーしました";
+  });
+  $("doneBtn").addEventListener("click", () => {
+    const p = state.patients[selected]; if (!p) return;
+    p.contacted = todayStr(); save(); render(); $("mToast").textContent = "連絡済みにしました";
+  });
+  $("sample").addEventListener("click", () => {
+    if (!confirm("サンプルデータに戻します。入力した患者さんは消えます。よろしいですか？")) return;
+    state = { cfg: Object.assign({}, DEFAULT_CFG), patients: samplePatients(todayStr()) };
+    ["cName", "cPrice", "cFollow", "cDormant"].forEach((id, k) => { $(id).value = state.cfg[["name", "price", "follow", "dormant"][k]]; });
+    selected = -1; filter = "need"; save(); render();
+  });
+  $("clear").addEventListener("click", () => {
+    if (!confirm("患者さんをすべて消します。よろしいですか？")) return;
+    state.patients = []; selected = -1; save(); render();
+  });
+  $("print").addEventListener("click", () => window.print());
+  render();
+}
+if (typeof document !== "undefined") init();
+if (typeof module !== "undefined") module.exports = { statusOf, summarize, sortPatients, buildMessage, parseImport, samplePatients, daysBetween, isContacted, DEFAULT_CFG };
+</script>
+</body>
+</html>

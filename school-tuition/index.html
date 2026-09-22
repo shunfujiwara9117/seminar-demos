@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>月謝・振替かんたん帳</title>
+<style>
+  :root {
+    --ink: #1d2733; --sub: #5b6b7c; --line: #dfe5ec; --bg: #f5f7fa; --card: #fff;
+    --main: #0f6e6e; --main-soft: #e3f3f2; --accent: #d9662b; --accent-soft: #fdeee5;
+    --warn: #b7791f; --warn-soft: #fdf6e3; --gray-soft: #eef1f4;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif; font-size: 15px; line-height: 1.6; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 20px 16px 60px; }
+  header h1 { font-size: 26px; margin: 8px 0 4px; letter-spacing: .02em; }
+  header p { margin: 0; color: var(--sub); }
+  .badge { display: inline-block; background: var(--sub); color: #fff; border-radius: 999px;
+    font-size: 12px; padding: 1px 10px; margin-left: 6px; vertical-align: 6px; font-weight: 500; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-top: 18px; }
+  .card h2 { font-size: 18px; margin: 0 0 4px; }
+  .card .hint { color: var(--sub); font-size: 13px; margin: 0 0 12px; }
+  select, input[type=text], input[type=number], textarea {
+    font: inherit; color: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: #fff; width: 100%; min-width: 0; }
+  input[type=number] { text-align: right; }
+  textarea { resize: vertical; line-height: 1.7; }
+  select:focus, input:focus, textarea:focus { outline: 2px solid var(--main); outline-offset: 0; border-color: var(--main); }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 8px 14px; color: var(--ink); }
+  button.primary { background: var(--main); border-color: var(--main); color: #fff; font-weight: 600; }
+  button.small { padding: 4px 10px; font-size: 13px; }
+  button:disabled { opacity: .45; cursor: default; }
+  .settings { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
+  .settings label, .add label, .rep label { font-size: 12px; color: var(--sub); display: block; }
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .stat { border-radius: 10px; padding: 14px; background: var(--main-soft); }
+  .stat.accent { background: var(--accent-soft); }
+  .stat.warn { background: var(--warn-soft); }
+  .stat.gray { background: var(--gray-soft); }
+  .stat .label { font-size: 12px; color: var(--sub); }
+  .stat .num { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .stat .num small { font-size: 13px; font-weight: 500; margin-left: 2px; }
+  .stat .sub { font-size: 12px; color: var(--sub); }
+  .stat.accent .num { color: var(--accent); }
+  .stat.warn .num { color: var(--warn); }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .tabs button { border-radius: 999px; padding: 5px 14px; font-size: 13px; }
+  .tabs button.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.list th { text-align: left; font-size: 12px; color: var(--sub); font-weight: 500; padding: 6px; border-bottom: 1px solid var(--line); }
+  table.list td { padding: 9px 6px; border-bottom: 1px dashed var(--line); vertical-align: middle; }
+  table.list td.n, table.list th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.list tr.sel td { background: var(--main-soft); }
+  table.list .parent { display: block; font-size: 12px; color: var(--sub); }
+  .chip { display: inline-block; border-radius: 999px; padding: 1px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; margin: 1px 2px 1px 0; }
+  .chip.ok { background: var(--main-soft); color: var(--main); }
+  .chip.pending { background: var(--warn-soft); color: var(--warn); }
+  .chip.overdue { background: var(--accent-soft); color: var(--accent); }
+  .chip.expiring { background: var(--warn-soft); color: var(--warn); }
+  .chip.expired { background: var(--gray-soft); color: var(--sub); }
+  .empty { color: var(--sub); text-align: center; padding: 24px 0; }
+  .msg { display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; }
+  .msg .who { font-size: 20px; font-weight: 700; }
+  .msg dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; margin: 10px 0 0; }
+  .msg dt { color: var(--sub); }
+  .msg dd { margin: 0; }
+  .mk { font-size: 13px; }
+  .ops { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
+  .seg button { border: 0; border-radius: 0; padding: 6px 12px; font-size: 13px; }
+  .seg button.on { background: var(--main); color: #fff; }
+  .rep { display: grid; gap: 6px; margin-bottom: 8px; }
+  .msg-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+  .toast { color: var(--main); font-size: 13px; font-weight: 700; }
+  .add { display: grid; grid-template-columns: 1fr 1fr 1fr .8fr .7fr auto; gap: 8px; align-items: end; }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--main); font-weight: 600; }
+  .note { font-size: 12px; color: var(--sub); margin-top: 12px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  footer { margin-top: 24px; font-size: 12px; color: var(--sub); text-align: center; }
+  @media (max-width: 760px) {
+    .settings { grid-template-columns: 1fr 1fr; }
+    .settings > div:first-child { grid-column: 1 / -1; }
+    .summary { grid-template-columns: 1fr 1fr; }
+    .msg { grid-template-columns: 1fr; }
+    .add { grid-template-columns: 1fr 1fr; }
+    table.list .hide-sp { display: none; }
+    table.list td:first-child { white-space: nowrap; }
+    table.list td, table.list th { padding-left: 4px; padding-right: 4px; }
+    .stat .num { font-size: 22px; }
+  }
+  @media print {
+    body { background: #fff; } .toolbar, button, .tabs, details { display: none !important; }
+    .card { break-inside: avoid; border-color: #bbb; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>月謝・振替かんたん帳<span class="badge">デモ</span></h1>
+    <p>月謝の未納と、振替レッスンの残り・期限をひと目で。保護者への連絡文もその場で作ります。</p>
+  </header>
+
+  <section class="card">
+    <h2>教室の設定</h2>
+    <p class="hint">未納の判定と振替の期限、連絡文に使います。教室に合わせて変えられます。</p>
+    <div class="settings">
+      <div><label for="cName">教室の名前</label><input id="cName" type="text"></div>
+      <div><label for="cDue">月謝の支払期限（毎月◯日）</label><input id="cDue" type="number" min="1" max="31" step="1" inputmode="numeric"></div>
+      <div><label for="cValid">振替の有効期限（発生から◯日）</label><input id="cValid" type="number" min="1" step="1" inputmode="numeric"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>今月の状況</h2>
+    <div class="summary">
+      <div class="stat"><div class="label">生徒さん</div><div class="num" id="sAll">0<small>人</small></div><div class="sub" id="sAllSub"></div></div>
+      <div class="stat accent"><div class="label">未納</div><div class="num" id="sOver">0<small>人</small></div><div class="sub" id="sOverSub"></div></div>
+      <div class="stat gray"><div class="label">振替の残り（合計）</div><div class="num" id="sMk">0<small>回</small></div><div class="sub" id="sMkSub"></div></div>
+      <div class="stat warn"><div class="label">期限が近い振替</div><div class="num" id="sExp">0<small>回</small></div><div class="sub" id="sExpSub"></div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>生徒さん一覧</h2>
+    <p class="hint">対応が必要な順に並んでいます（未納 → 振替期限が近い → 期限前の未入金 → 振替期限切れ）。行を選ぶと、下で入金の記録と連絡文づくりができます。</p>
+    <div class="tabs" id="tabs"></div>
+    <table class="list">
+      <thead><tr><th>生徒さん</th><th class="hide-sp">コース</th><th class="n hide-sp">月謝</th><th class="n hide-sp">未納</th><th class="n">振替残</th><th>状態</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <details>
+      <summary>＋ 生徒さんを追加する</summary>
+      <div class="add" style="margin-top:10px">
+        <div><label for="aName">生徒さんのお名前</label><input id="aName" type="text" placeholder="例）山田 花"></div>
+        <div><label for="aParent">保護者のお名前</label><input id="aParent" type="text" placeholder="例）山田 恵"></div>
+        <div><label for="aCourse">コース</label><input id="aCourse" type="text" placeholder="例）ピアノ 初級"></div>
+        <div><label for="aFee">月謝（円）</label><input id="aFee" type="number" min="0" step="100" inputmode="numeric" placeholder="8800"></div>
+        <div><label for="aUnpaid">未入金の月数</label><input id="aUnpaid" type="number" min="0" step="1" inputmode="numeric" value="0"></div>
+        <button class="primary" id="addBtn" type="button">追加</button>
+      </div>
+      <p class="note">「未入金の月数」は今月を含めて数えます（今月分まで入金済みなら 0）。</p>
+    </details>
+    <details>
+      <summary>＋ 名簿をまとめて取り込む（貼り付け）</summary>
+      <p class="hint" style="margin-top:8px">1行に1人、「生徒名, 保護者名, コース, 月謝, 未入金の月数（今月を含む）, 振替の発生日」の順でカンマ区切り。
+        振替が複数あるときは発生日を「/」ではなく「;」でつなぎます。Excelからコピーしたもの（タブ区切り）でも読めます。</p>
+      <textarea id="csv" rows="4" placeholder="山田 花, 山田 恵, ピアノ 初級, 8800, 1, 2026-08-10;2026-09-01"></textarea>
+      <div class="msg-actions"><button class="primary" id="csvBtn" type="button">取り込む</button><span class="toast" id="csvMsg"></span></div>
+    </details>
+  </section>
+
+  <section class="card" id="msgCard">
+    <h2>入金・振替の記録と連絡文</h2>
+    <div id="msgEmpty" class="empty">上の一覧から、生徒さんを選んでください。</div>
+    <div class="msg" id="msgBody" hidden>
+      <div>
+        <div class="who" id="mWho"></div>
+        <dl id="mInfo"></dl>
+        <div class="ops">
+          <button class="primary small" id="payBtn" type="button">1か月分の入金を記録</button>
+          <button class="small" id="useBtn" type="button">振替を1回消化</button>
+          <button class="small" id="mkBtn" type="button">振替を1回追加（今日発生）</button>
+        </div>
+        <div class="toast" id="opToast" style="margin-top:6px"></div>
+      </div>
+      <div>
+        <div class="seg" id="kindSeg"></div>
+        <div class="rep" id="repBox">
+          <div><label for="rDone">できるようになったこと</label><input id="rDone" type="text" placeholder="例）両手で「きらきら星」を最後まで弾けました"></div>
+          <div><label for="rNext">次の目標</label><input id="rNext" type="text" placeholder="例）強弱をつけて弾けるようになること"></div>
+          <div><label for="rComment">講師からひとこと</label><input id="rComment" type="text" placeholder="例）毎回とても集中して取り組んでいます"></div>
+        </div>
+        <textarea id="mText" rows="10" aria-label="連絡文"></textarea>
+        <div class="msg-actions">
+          <button class="primary" id="copyBtn" type="button">文面をコピー</button>
+          <span class="toast" id="mToast"></span>
+        </div>
+        <p class="note">文面は自由に書き換えられます。送る前に、金額・日付・内容が合っているかを必ずご確認ください。</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <button id="sample" type="button">サンプルデータに戻す</button>
+    <button id="clear" type="button">生徒さんをすべて消す</button>
+    <button id="print" type="button">一覧を印刷</button>
+  </div>
+
+  <footer>
+    入力した内容は、この端末のブラウザの中だけに保存されます。外部には一切送信されません。<br>
+    表示している生徒さん・保護者の方はすべて架空のサンプルです。<br>
+    © 合同会社ウルノワ ／ 無断での転載・再配布はご遠慮ください。
+  </footer>
+</div>
+
+<script>
+"use strict";
+const STORE_KEY = "school-tuition-v1";
+// 振替期限の「近い」とみなす残り日数
+const EXPIRING_DAYS = 14;
+const STATUS = {
+  overdue: { label: "未納", order: 0 },
+  expiring: { label: "振替期限間近", order: 1 },
+  pending: { label: "期限前・未入金", order: 2 },
+  expired: { label: "振替期限切れ", order: 3 },
+  ok: { label: "問題なし", order: 4 }
+};
+const DEFAULT_CFG = { name: "こもれび音楽・英語教室", due: 27, valid: 60 };
+// サンプル: [生徒名, 保護者名, コース, 月謝, 未入金の月数（今月を含む）, 振替が何日前に発生したか]
+const SAMPLE = [
+  ["青木 陽菜", "青木 真由美", "ピアノ 初級", 8800, 0, [50]], ["石井 蓮", "石井 智子", "英会話 小学生", 9900, 2, []],
+  ["上田 結衣", "上田 恵", "ピアノ 中級", 11000, 1, [20]], ["遠藤 颯太", "遠藤 亜希", "算数 小4", 12100, 0, [48, 15]],
+  ["岡田 さくら", "岡田 典子", "英会話 小学生", 9900, 0, []], ["川村 湊", "川村 由紀", "プログラミング", 13200, 3, [70]],
+  ["木下 凛", "木下 綾", "ピアノ 初級", 8800, 0, []], ["工藤 大和", "工藤 恵美", "算数 小4", 12100, 1, []],
+  ["小松 杏", "小松 佳織", "英会話 中学生", 11000, 0, [65]], ["坂本 悠真", "坂本 陽子", "プログラミング", 13200, 0, [5]],
+  ["清水 芽依", "清水 理恵", "ピアノ 中級", 11000, 2, [55]], ["高野 陸", "高野 瞳", "英会話 中学生", 11000, 0, []]
+];
+
+// ---- 純粋関数 ----
+const parseDate = s => { const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(s || "").trim().replace(/\//g, "-")); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : NaN; };
+const ymd = t => new Date(t).toISOString().slice(0, 10);
+const daysBetween = (from, to) => Math.round((parseDate(to) - parseDate(from)) / 86400000);
+const todayStr = () => { const d = new Date(); return ymd(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); };
+const addDays = (s, n) => ymd(parseDate(s) + n * 86400000);
+const yen = n => Math.round(n).toLocaleString("ja-JP");
+// 月は「年×12＋月-1」の通し番号で扱う
+const monthIdx = s => { const [y, m] = String(s).split("-").map(Number); return y * 12 + m - 1; };
+const monthStr = i => Math.floor(i / 12) + "-" + String(i % 12 + 1).padStart(2, "0");
+const monthLabel = i => (i % 12 + 1) + "月";
+const daysInMonth = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+
+// 今月の支払期限日（31日設定の月末調整込み）
+function dueDateOf(today, cfg) {
+  const [y, m] = today.split("-").map(Number);
+  return Math.min(cfg.due, daysInMonth(y, m));
+}
+function checkStudent(s, today, cfg) {
+  const cur = monthIdx(today), day = Number(today.slice(8, 10));
+  const behind = Math.max(0, cur - monthIdx(s.paidThrough)); // 今月を含む未入金の月数
+  const beforeDue = day <= dueDateOf(today, cfg);
+  // 期限前なら今月分はまだ「未納」に数えない
+  const overdueCount = beforeDue ? Math.max(0, behind - 1) : behind;
+  const overdueMonths = [];
+  for (let k = 0; k < overdueCount; k++) overdueMonths.push(monthIdx(s.paidThrough) + 1 + k);
+  const makeups = (s.makeups || []).map(d => { const exp = addDays(d, cfg.valid); return { date: d, expiry: exp, rem: daysBetween(today, exp) }; })
+    .sort((a, b) => a.rem - b.rem);
+  const flags = [];
+  if (overdueCount > 0) flags.push("overdue");
+  if (makeups.some(x => x.rem >= 0 && x.rem <= EXPIRING_DAYS)) flags.push("expiring");
+  if (behind > 0 && beforeDue && overdueCount === 0) flags.push("pending");
+  if (makeups.some(x => x.rem < 0)) flags.push("expired");
+  if (!flags.length) flags.push("ok");
+  return {
+    behind, overdueCount, overdueMonths, owed: overdueCount * s.fee, makeups, flags,
+    valid: makeups.filter(x => x.rem >= 0), expiring: makeups.filter(x => x.rem >= 0 && x.rem <= EXPIRING_DAYS), expired: makeups.filter(x => x.rem < 0),
+    order: Math.min(...flags.map(f => STATUS[f].order))
+  };
+}
+function sortStudents(list, today, cfg) {
+  return list.map(s => ({ s, c: checkStudent(s, today, cfg) }))
+    .sort((a, b) => (a.c.order - b.c.order) || (b.c.owed - a.c.owed) || (b.c.expiring.length - a.c.expiring.length));
+}
+function summarize(list, today, cfg) {
+  const r = { all: list.length, paidNow: 0, overdue: 0, owed: 0, owedMonths: 0, makeups: 0, makeupPeople: 0, expiring: 0, expired: 0 };
+  for (const s of list) {
+    const c = checkStudent(s, today, cfg);
+    if (c.behind === 0) r.paidNow++;
+    if (c.overdueCount > 0) { r.overdue++; r.owed += c.owed; r.owedMonths += c.overdueCount; }
+    if (c.valid.length) { r.makeups += c.valid.length; r.makeupPeople++; }
+    r.expiring += c.expiring.length; r.expired += c.expired.length;
+  }
+  return r;
+}
+const surname = name => String(name || "").trim().split(/[\s　]+/)[0] || "";
+const given = name => { const p = String(name || "").trim().split(/[\s　]+/); return p[p.length - 1] || ""; };
+const jpDate = s => { const [, m, d] = s.split("-").map(Number); return m + "月" + d + "日"; };
+
+function buildMessage(kind, s, today, cfg, report) {
+  const c = checkStudent(s, today, cfg), school = cfg.name || "当教室";
+  const to = surname(s.parent || s.name) + "様", kid = given(s.name) + "さん";
+  const head = `${to}\n\nいつもお世話になっております。${school}です。\n`;
+  const tail = `\n\n${school}`;
+  if (kind === "report") {
+    const r = report || {}, month = monthLabel(monthIdx(today));
+    const parts = [["できるようになったこと", r.done], ["次の目標", r.next], ["講師からひとこと", r.comment]]
+      .filter(([, v]) => v && v.trim()).map(([k, v]) => `■ ${k}\n${v.trim()}`);
+    const body = parts.length ? parts.join("\n\n") : "（左の欄に、今月できるようになったこと・次の目標・ひとことを入れると、ここに入ります）";
+    return head + `${kid}の${month}のレッスンのご様子をお伝えします。\n\n${body}\n\n` +
+      `ご家庭でも、ぜひたくさん褒めてあげてください。\n引き続きどうぞよろしくお願いいたします。` + tail;
+  }
+  if (kind === "unpaid") {
+    if (!c.overdueCount) return "（" + s.name + "さんに、期限を過ぎた未納はありません）";
+    const months = c.overdueMonths.map(monthLabel).join("・");
+    return head + `${kid}の${months}分の月謝（合計 ${yen(c.owed)}円）のご入金が、こちらでまだ確認できておりません。\n` +
+      `すでにお手続きいただいている場合は、行き違いとなり大変失礼いたしました。\n` +
+      `お忙しいところ恐れ入りますが、ご確認いただけますと幸いです。\nご不明な点があれば、どうぞお気軽にお声がけください。` + tail;
+  }
+  if (!c.valid.length) return "（" + s.name + "さんに、期限内の振替はありません）";
+  const lines = c.valid.map(x => `・${jpDate(x.date)}のお休み分 → ${jpDate(x.expiry)}まで`).join("\n");
+  return head + `${kid}の振替レッスンが、${c.valid.length}回分ご利用いただけます。\n\n${lines}\n\n` +
+    `期限を過ぎるとご利用いただけなくなりますので、ご希望の日時があれば、このメッセージへのご返信でお知らせください。\n` +
+    `空いている枠をご案内いたします。` + tail;
+}
+function parseImport(text, today) {
+  const out = [], bad = [];
+  String(text || "").split(/\r?\n/).forEach((line, i) => {
+    if (!line.trim()) return;
+    // Excelからのコピー（タブ区切り）なら「8,800」のようなカンマ入り金額も読める
+    const f = line.split(line.includes("\t") ? /\t/ : /,|、/).map(x => x.trim());
+    const fee = Number(String(f[3] || "").replace(/[,円\s]/g, ""));
+    if (!f[0] || !(fee > 0)) { bad.push(i + 1); return; }
+    const unpaid = Math.max(0, parseInt(f[4], 10) || 0);
+    const makeups = String(f[5] || "").split(/[;；]/).map(x => x.trim().replace(/\//g, "-")).filter(x => x)
+      .filter(x => Number.isFinite(parseDate(x))).map(x => ymd(parseDate(x)));
+    out.push({ name: f[0], parent: f[1] || "", course: f[2] || "", fee, paidThrough: monthStr(monthIdx(today) - unpaid), makeups, report: {} });
+  });
+  return { out, bad };
+}
+function sampleStudents(today) {
+  return SAMPLE.map(([name, parent, course, fee, unpaid, ago]) =>
+    ({ name, parent, course, fee, paidThrough: monthStr(monthIdx(today) - unpaid), makeups: ago.map(n => addDays(today, -n)), report: {} }));
+}
+// 入金を1か月分記録（古い月から埋める）
+function recordPayment(s) { s.paidThrough = monthStr(monthIdx(s.paidThrough) + 1); return s; }
+// 期限内で一番早く切れる振替を1回消化
+function useMakeup(s, today, cfg) {
+  const v = checkStudent(s, today, cfg).valid;
+  if (!v.length) return false;
+  s.makeups.splice(s.makeups.indexOf(v[0].date), 1);
+  return true;
+}
+
+// ---- 画面 ----
+let state = null, selected = -1, filter = "need", kind = "report";
+const $ = id => document.getElementById(id);
+function el(tag, props, children) {
+  const e = document.createElement(tag);
+  Object.assign(e, props || {});
+  (children || []).forEach(c => e.append(c));
+  return e;
+}
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (s && Array.isArray(s.students) && s.cfg) return s;
+  } catch (e) {}
+  return null;
+}
+function cfg() {
+  const c = state.cfg, n = (v, d) => { const x = Number(v); return Number.isFinite(x) && x > 0 ? Math.floor(x) : d; };
+  return { name: c.name, due: Math.min(31, n(c.due, DEFAULT_CFG.due)), valid: n(c.valid, DEFAULT_CFG.valid) };
+}
+function setStat(id, value, unit) { $(id).replaceChildren(value, el("small", { textContent: unit })); }
+
+const TABS = [["need", "対応が必要"], ["overdue", "未納"], ["expiring", "振替期限間近"], ["pending", "期限前・未入金"], ["expired", "振替期限切れ"], ["all", "すべて"]];
+function render() {
+  const today = todayStr(), c = cfg(), r = summarize(state.students, today, c);
+  setStat("sAll", r.all, "人"); $("sAllSub").textContent = "今月分まで入金済み " + r.paidNow + "人";
+  setStat("sOver", r.overdue, "人"); $("sOverSub").textContent = "合計 " + yen(r.owed) + "円（月謝 × 未納の月数 " + r.owedMonths + "か月分）";
+  setStat("sMk", r.makeups, "回"); $("sMkSub").textContent = r.makeupPeople + "人分・期限内のもの";
+  setStat("sExp", r.expiring, "回"); $("sExpSub").textContent = "残り" + EXPIRING_DAYS + "日以内 ／ 期限切れ " + r.expired + "回";
+
+  $("tabs").replaceChildren(...TABS.map(([k, label]) => {
+    const b = el("button", { type: "button", textContent: label, className: k === filter ? "on" : "" });
+    b.addEventListener("click", () => { filter = k; render(); });
+    return b;
+  }));
+  const rows = sortStudents(state.students, today, c).filter(x =>
+    filter === "all" ? true : filter === "need" ? !x.c.flags.includes("ok") : x.c.flags.includes(filter));
+  $("rows").replaceChildren(...(rows.length ? rows.map(x => {
+    const i = state.students.indexOf(x.s);
+    const pick = el("button", { type: "button", className: "small" + (x.c.flags.includes("ok") ? "" : " primary"), textContent: "開く" });
+    const del = el("button", { type: "button", className: "small hide-sp", textContent: "削除", ariaLabel: x.s.name + "さんを削除" });
+    pick.addEventListener("click", () => { selected = i; render(); $("msgCard").scrollIntoView({ behavior: "smooth", block: "start" }); });
+    del.addEventListener("click", () => {
+      if (!confirm(x.s.name + "さんを一覧から削除します。よろしいですか？")) return;
+      state.students.splice(i, 1); selected = selected === i ? -1 : selected > i ? selected - 1 : selected; save(); render();
+    });
+    return el("tr", { className: i === selected ? "sel" : "" }, [
+      el("td", {}, [x.s.name, el("span", { className: "parent hide-sp", textContent: "保護者: " + (x.s.parent || "―") })]),
+      el("td", { className: "hide-sp", textContent: x.s.course }),
+      el("td", { className: "n hide-sp", textContent: yen(x.s.fee) + "円" }),
+      el("td", { className: "n hide-sp", textContent: x.c.overdueCount ? x.c.overdueCount + "か月" : "―" }),
+      el("td", { className: "n", textContent: x.c.valid.length + "回" }),
+      el("td", {}, x.c.flags.map(f => el("span", { className: "chip " + f, textContent: STATUS[f].label }))),
+      el("td", { className: "n" }, [pick, " ", del])]);
+  }) : [el("tr", {}, [el("td", { colSpan: 7, className: "empty", textContent: "該当する生徒さんはいません。" })])]));
+  renderDetail(today, c);
+}
+
+function renderDetail(today, c) {
+  const s = state.students[selected];
+  $("msgEmpty").hidden = !!s; $("msgBody").hidden = !s;
+  if (!s) return;
+  const k = checkStudent(s, today, c);
+  $("mWho").textContent = s.name + " さん";
+  const mk = k.makeups.length ? el("div", { className: "mk" }, k.makeups.map(x => el("div", {
+    textContent: jpDate(x.date) + "発生 → " + jpDate(x.expiry) + "まで（" + (x.rem >= 0 ? "残り" + x.rem + "日" : "期限切れ") + "）" }))) : "なし";
+  const info = [["保護者", s.parent || "―"], ["コース", s.course || "―"], ["月謝", yen(s.fee) + "円"],
+    ["入金済み", Math.floor(monthIdx(s.paidThrough) / 12) + "年" + monthLabel(monthIdx(s.paidThrough)) + "分まで"],
+    ["未納", k.overdueCount ? k.overdueMonths.map(monthLabel).join("・") + "分 " + yen(k.owed) + "円" : (k.behind ? "今月分は期限前（" + dueDateOf(today, c) + "日まで）" : "なし")],
+    ["振替", mk]];
+  $("mInfo").replaceChildren(...info.flatMap(([a, b]) => [el("dt", { textContent: a }), el("dd", {}, [b])]));
+  $("useBtn").disabled = !k.valid.length;
+  $("kindSeg").replaceChildren(...[["report", "今月の様子（保護者へ）"], ["unpaid", "未納のご案内"], ["makeup", "振替期限のお知らせ"]].map(([key, label]) => {
+    const b = el("button", { type: "button", textContent: label, className: key === kind ? "on" : "" });
+    b.addEventListener("click", () => { kind = key; renderDetail(today, c); });
+    return b;
+  }));
+  $("repBox").hidden = kind !== "report";
+  s.report = s.report || {};
+  $("rDone").value = s.report.done || ""; $("rNext").value = s.report.next || ""; $("rComment").value = s.report.comment || "";
+  $("mText").value = buildMessage(kind, s, today, c, s.report);
+  $("mToast").textContent = "";
+}
+
+function init() {
+  const today = todayStr();
+  state = load() || { cfg: Object.assign({}, DEFAULT_CFG), students: sampleStudents(today) };
+  const bind = (id, key) => {
+    $(id).value = state.cfg[key];
+    $(id).addEventListener("input", () => { state.cfg[key] = $(id).value; save(); render(); });
+  };
+  bind("cName", "name"); bind("cDue", "due"); bind("cValid", "valid");
+  [["rDone", "done"], ["rNext", "next"], ["rComment", "comment"]].forEach(([id, key]) => $(id).addEventListener("input", () => {
+    const s = state.students[selected]; if (!s) return;
+    s.report[key] = $(id).value; save();
+    $("mText").value = buildMessage("report", s, todayStr(), cfg(), s.report);
+  }));
+  const op = (fn, msg) => () => { const s = state.students[selected]; if (!s) return; if (fn(s) === false) return; save(); render(); $("opToast").textContent = msg; };
+  $("payBtn").addEventListener("click", op(s => { recordPayment(s); }, "1か月分の入金を記録しました"));
+  $("useBtn").addEventListener("click", op(s => useMakeup(s, todayStr(), cfg()), "振替を1回消化しました"));
+  $("mkBtn").addEventListener("click", op(s => { s.makeups.push(todayStr()); }, "振替を1回追加しました"));
+  $("addBtn").addEventListener("click", () => {
+    const name = $("aName").value.trim(), fee = Number($("aFee").value);
+    if (!name || !(fee > 0)) { alert("生徒さんのお名前と月謝を入れてください。"); return; }
+    const unpaid = Math.max(0, parseInt($("aUnpaid").value, 10) || 0);
+    state.students.push({ name, parent: $("aParent").value.trim(), course: $("aCourse").value.trim(), fee,
+      paidThrough: monthStr(monthIdx(todayStr()) - unpaid), makeups: [], report: {} });
+    ["aName", "aParent", "aCourse", "aFee"].forEach(id => { $(id).value = ""; }); $("aUnpaid").value = "0";
+    filter = "all"; save(); render();
+  });
+  $("csvBtn").addEventListener("click", () => {
+    const { out, bad } = parseImport($("csv").value, todayStr());
+    state.students.push(...out); save(); filter = "all"; render();
+    $("csvMsg").textContent = out.length + "人を取り込みました" + (bad.length ? "（読めなかった行: " + bad.join(", ") + "行目）" : "");
+    if (out.length) $("csv").value = "";
+  });
+  $("copyBtn").addEventListener("click", async () => {
+    const t = $("mText");
+    try { await navigator.clipboard.writeText(t.value); } catch (e) { t.select(); document.execCommand("copy"); }
+    $("mToast").textContent = "コピーしました";
+  });
+  $("sample").addEventListener("click", () => {
+    if (!confirm("サンプルデータに戻します。入力した生徒さんは消えます。よろしいですか？")) return;
+    state = { cfg: Object.assign({}, DEFAULT_CFG), students: sampleStudents(todayStr()) };
+    $("cName").value = state.cfg.name; $("cDue").value = state.cfg.due; $("cValid").value = state.cfg.valid;
+    selected = -1; filter = "need"; save(); render();
+  });
+  $("clear").addEventListener("click", () => {
+    if (!confirm("生徒さんをすべて消します。よろしいですか？")) return;
+    state.students = []; selected = -1; save(); render();
+  });
+  $("print").addEventListener("click", () => window.print());
+  render();
+}
+if (typeof document !== "undefined") init();
+if (typeof module !== "undefined") module.exports = { checkStudent, summarize, sortStudents, buildMessage, parseImport, sampleStudents, recordPayment, useMakeup, dueDateOf, monthIdx, monthStr, DEFAULT_CFG };
+</script>
+</body>
+</html>

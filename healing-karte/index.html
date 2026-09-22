@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>お客様カルテ＆フォロー</title>
+<style>
+  :root {
+    --ink: #1d2733; --sub: #5b6b7c; --line: #dfe5ec; --bg: #f5f7fa; --card: #fff;
+    --main: #0f6e6e; --main-soft: #e3f3f2; --accent: #d9662b; --accent-soft: #fdeee5;
+    --warn: #b7791f; --warn-soft: #fdf6e3; --gray-soft: #eef1f4; --pink: #b83f6f; --pink-soft: #fbe9f0;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif; font-size: 15px; line-height: 1.6; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 20px 16px 60px; }
+  header h1 { font-size: 26px; margin: 8px 0 4px; letter-spacing: .02em; }
+  header p { margin: 0; color: var(--sub); }
+  .badge { display: inline-block; background: var(--sub); color: #fff; border-radius: 999px;
+    font-size: 12px; padding: 1px 10px; margin-left: 6px; vertical-align: 6px; font-weight: 500; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-top: 18px; min-width: 0; }
+  .card h2 { font-size: 18px; margin: 0 0 4px; }
+  .card .hint { color: var(--sub); font-size: 13px; margin: 0 0 12px; }
+  select, input[type=text], input[type=number], input[type=date], textarea {
+    font: inherit; color: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: #fff; width: 100%; min-width: 0; }
+  input[type=number] { text-align: right; }
+  textarea { resize: vertical; line-height: 1.7; }
+  select:focus, input:focus, textarea:focus { outline: 2px solid var(--main); outline-offset: 0; border-color: var(--main); }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 8px 14px; color: var(--ink); }
+  button.primary { background: var(--main); border-color: var(--main); color: #fff; font-weight: 600; }
+  button.small { padding: 4px 10px; font-size: 13px; }
+  label.lb { font-size: 12px; color: var(--sub); display: block; }
+  .settings { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 12px; }
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .stat { border-radius: 10px; padding: 14px; background: var(--main-soft); min-width: 0; }
+  .stat.accent { background: var(--accent-soft); }
+  .stat.pink { background: var(--pink-soft); }
+  .stat.gray { background: var(--gray-soft); }
+  .stat .label { font-size: 12px; color: var(--sub); }
+  .stat .num { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .stat .num small { font-size: 13px; font-weight: 500; margin-left: 2px; }
+  .stat .sub { font-size: 12px; color: var(--sub); }
+  .stat.accent .num { color: var(--accent); }
+  .stat.pink .num { color: var(--pink); }
+  .chip { display: inline-block; border-radius: 999px; padding: 1px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .chip.thanks { background: var(--main-soft); color: var(--main); }
+  .chip.tickets { background: var(--warn-soft); color: var(--warn); }
+  .chip.follow { background: var(--accent-soft); color: var(--accent); }
+  .chip.birthday { background: var(--pink-soft); color: var(--pink); }
+  .tasks { list-style: none; margin: 0; padding: 0; }
+  .tasks li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 0; border-top: 1px dashed var(--line); }
+  .tasks li:first-child { border-top: 0; }
+  .tasks .who { font-weight: 700; }
+  .tasks .why { color: var(--sub); font-size: 13px; flex: 1 1 200px; min-width: 0; }
+  .tasks li.done { opacity: .55; }
+  .empty { color: var(--sub); text-align: center; padding: 20px 0; }
+  .main { display: grid; grid-template-columns: 300px 1fr; gap: 18px; align-items: start; }
+  .clist { list-style: none; margin: 8px 0 0; padding: 0; max-height: 640px; overflow-y: auto; }
+  .clist button { width: 100%; text-align: left; border: 0; border-top: 1px dashed var(--line); border-radius: 0; padding: 9px 6px; background: none; display: block; }
+  .clist button.sel { background: var(--main-soft); }
+  .clist .n { font-weight: 700; }
+  .clist .m { font-size: 12px; color: var(--sub); display: block; }
+  .clist .dots { float: right; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 3px; vertical-align: 2px; }
+  .dot.thanks { background: var(--main); } .dot.tickets { background: var(--warn); }
+  .dot.follow { background: var(--accent); } .dot.birthday { background: var(--pink); }
+  .prof { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .prof .name { font-size: 22px; font-weight: 700; }
+  .prof .call { color: var(--sub); font-size: 13px; }
+  .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+  .facts > div { background: var(--bg); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+  .facts .k { font-size: 11px; color: var(--sub); }
+  .facts .v { font-weight: 700; overflow-wrap: anywhere; }
+  .facts .v.low { color: var(--accent); }
+  .focus { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .focus > div { border-radius: 10px; padding: 12px; background: var(--main-soft); min-width: 0; }
+  .focus > div.next { background: var(--accent-soft); }
+  .focus .k { font-size: 12px; color: var(--sub); }
+  .focus .v { font-weight: 600; overflow-wrap: anywhere; }
+  h3 { font-size: 15px; margin: 20px 0 6px; }
+  .timeline { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); }
+  .timeline li { position: relative; padding: 0 0 12px 10px; }
+  .timeline li::before { content: ""; position: absolute; left: -21px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: var(--main); }
+  .timeline .d { font-size: 13px; color: var(--sub); }
+  .timeline .t { font-weight: 700; }
+  .timeline .memo { font-size: 14px; overflow-wrap: anywhere; }
+  .timeline .nx { font-size: 13px; color: var(--accent); }
+  .addsess { display: grid; grid-template-columns: 150px 1fr; gap: 8px; margin-top: 8px; }
+  .addsess .full { grid-column: 1 / -1; }
+  .addsess .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; grid-column: 1 / -1; font-size: 13px; }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin: 0 8px 8px 0; }
+  .seg button { border: 0; border-radius: 0; padding: 6px 12px; font-size: 13px; }
+  .seg button.on { background: var(--main); color: #fff; }
+  .msg-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+  .toast { color: var(--main); font-size: 13px; font-weight: 700; }
+  .sentlog { font-size: 12px; color: var(--sub); margin-top: 6px; }
+  .add { display: grid; grid-template-columns: 1.2fr 1fr .8fr 1.2fr .7fr auto; gap: 8px; align-items: end; margin-top: 10px; }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--main); font-weight: 600; }
+  .note { font-size: 12px; color: var(--sub); margin-top: 12px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  footer { margin-top: 24px; font-size: 12px; color: var(--sub); text-align: center; }
+  @media (max-width: 760px) {
+    .settings { grid-template-columns: 1fr 1fr; }
+    .settings > div:first-child { grid-column: 1 / -1; }
+    .summary, .facts { grid-template-columns: 1fr 1fr; }
+    .main, .focus { grid-template-columns: 1fr; }
+    .clist { max-height: 260px; }
+    .addsess { grid-template-columns: 1fr; }
+    .add { grid-template-columns: 1fr 1fr; }
+    .stat .num { font-size: 22px; }
+  }
+  @media print {
+    body { background: #fff; } .toolbar, button, details, .seg, textarea, .msg-actions, .addsess { display: none !important; }
+    .card { break-inside: avoid; border-color: #bbb; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>お客様カルテ＆フォロー<span class="badge">デモ</span></h1>
+    <p>セッションの記録をカルテにまとめ、「今日だれに、どんな連絡をするか」を自動で並べます。連絡文もその場で作れます。</p>
+  </header>
+
+  <section class="card">
+    <h2>サロンの設定</h2>
+    <p class="hint">連絡文と見込み額の計算に使います。サロンに合わせて変えられます。</p>
+    <div class="settings">
+      <div><label class="lb" for="cName">サロンの名前</label><input id="cName" type="text"></div>
+      <div><label class="lb" for="cPrice">1回あたりの平均単価（円）</label><input id="cPrice" type="number" min="0" step="500" inputmode="numeric"></div>
+      <div><label class="lb" for="cInterval">近況伺いをする間隔（日）</label><input id="cInterval" type="number" min="1" step="1" inputmode="numeric"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>今日の状況</h2>
+    <div class="summary">
+      <div class="stat"><div class="label">カルテのあるお客様</div><div class="num" id="sAll">0<small>人</small></div><div class="sub" id="sAllSub"></div></div>
+      <div class="stat accent"><div class="label">今日連絡したい方</div><div class="num" id="sToday">0<small>人</small></div><div class="sub" id="sTodaySub"></div></div>
+      <div class="stat pink"><div class="label">今月が誕生月の方</div><div class="num" id="sBirth">0<small>人</small></div><div class="sub" id="sBirthSub"></div></div>
+      <div class="stat gray"><div class="label">しばらく来ていない方が1回ずつ戻ると</div><div class="num" id="sLost">0<small>円</small></div><div class="sub" id="sLostSub"></div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>今日やること</h2>
+    <p class="hint">お礼 → 回数券 → 近況伺い → お誕生日 の順に並んでいます。「連絡文」を押すと、その方のカルテと文面が開きます。</p>
+    <ul class="tasks" id="tasks"></ul>
+  </section>
+
+  <div class="main">
+    <section class="card">
+      <h2>お客様</h2>
+      <input id="search" type="text" placeholder="お名前・テーマで探す" aria-label="お客様を探す">
+      <ul class="clist" id="clist"></ul>
+    </section>
+
+    <section class="card" id="karte">
+      <div id="kEmpty" class="empty">左の一覧から、お客様を選んでください。</div>
+      <div id="kBody" hidden>
+        <div class="prof"><span class="name" id="kName"></span><span class="call" id="kCall"></span></div>
+        <div class="facts" id="kFacts"></div>
+        <div class="focus">
+          <div><div class="k">前回のメモ</div><div class="v" id="kMemo"></div></div>
+          <div class="next"><div class="k">次回の提案</div><div class="v" id="kNext"></div></div>
+        </div>
+
+        <h3>連絡文</h3>
+        <div><div class="seg" id="kindSeg"></div><div class="seg" id="styleSeg"></div></div>
+        <textarea id="mText" rows="8" aria-label="連絡文"></textarea>
+        <div class="msg-actions">
+          <button class="primary" id="copyBtn" type="button">文面をコピー</button>
+          <button id="sentBtn" type="button">送ったことを記録</button>
+          <span class="toast" id="mToast"></span>
+        </div>
+        <div class="sentlog" id="sentLog"></div>
+        <p class="note">文面は自由に書き換えられます。送る前に、内容が合っているかを必ずご確認ください。</p>
+
+        <h3>セッション履歴</h3>
+        <ul class="timeline" id="kHist"></ul>
+
+        <details id="addSessBox">
+          <summary>＋ 今日のセッションを記録する</summary>
+          <div class="addsess">
+            <div><label class="lb" for="sDate">日付</label><input id="sDate" type="date"></div>
+            <div><label class="lb" for="sMenu">メニュー</label><input id="sMenu" type="text" placeholder="例）カウンセリング60分"></div>
+            <div class="full"><label class="lb" for="sMemo">メモ（お話の内容・様子）</label><textarea id="sMemo" rows="2"></textarea></div>
+            <div class="full"><label class="lb" for="sNext">次回の提案</label><input id="sNext" type="text" placeholder="例）呼吸法の続きを一緒に練習"></div>
+            <div class="row"><label><input id="sTicket" type="checkbox"> 回数券を1回使う</label>
+              <button class="primary" id="sAdd" type="button">記録する</button></div>
+          </div>
+        </details>
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>お客様を追加する</h2>
+    <div class="add">
+      <div><label class="lb" for="aName">お名前</label><input id="aName" type="text" placeholder="例）山田 花子"></div>
+      <div><label class="lb" for="aCall">呼び方（任意）</label><input id="aCall" type="text" placeholder="例）花子さん"></div>
+      <div><label class="lb" for="aBirth">誕生日（月/日）</label><input id="aBirth" type="text" placeholder="例）4/15"></div>
+      <div><label class="lb" for="aTheme">主な相談テーマ</label><input id="aTheme" type="text" placeholder="例）眠りの質"></div>
+      <div><label class="lb" for="aTickets">回数券の残り</label><input id="aTickets" type="number" min="0" step="1" inputmode="numeric" placeholder="なし"></div>
+      <button class="primary" id="addBtn" type="button">追加</button>
+    </div>
+    <details>
+      <summary>＋ 予約システムや名簿の一覧をまとめて取り込む（貼り付け）</summary>
+      <p class="hint" style="margin-top:8px">1行に1人、「お名前, 誕生日(月/日), 相談テーマ, 最終来店日」の順でカンマ区切り。Excelからコピーしたもの（タブ区切り）でも読めます。</p>
+      <textarea id="csv" rows="4" placeholder="山田 花子, 4/15, 眠りの質, 2026-08-01"></textarea>
+      <div class="msg-actions"><button class="primary" id="csvBtn" type="button">取り込む</button><span class="toast" id="csvMsg"></span></div>
+    </details>
+  </section>
+
+  <div class="toolbar">
+    <button id="sample" type="button">サンプルデータに戻す</button>
+    <button id="clear" type="button">お客様をすべて消す</button>
+    <button id="print" type="button">カルテを印刷</button>
+  </div>
+
+  <footer>
+    入力した内容は、この端末のブラウザの中だけに保存されます。外部には一切送信されません。<br>
+    表示しているお客様はすべて架空のサンプルです。<br>
+    © 合同会社ウルノワ ／ 無断での転載・再配布はご遠慮ください。
+  </footer>
+</div>
+
+<script>
+"use strict";
+const STORE_KEY = "healing-karte-v1";
+const KINDS = {
+  thanks: { label: "お礼", order: 0 },
+  tickets: { label: "回数券", order: 1 },
+  follow: { label: "近況伺い", order: 2 },
+  birthday: { label: "お誕生日", order: 3 }
+};
+// お誕生日の連絡をしてから、この日数は再表示しない
+const BIRTHDAY_COOLDOWN = 90;
+const DEFAULT_CFG = { name: "サロン ひだまり", price: 8000, interval: 30 };
+// サンプル: [お名前, 呼び方, 誕生日(今月から何か月後, 日), テーマ, 回数券の残り(null=なし), セッション[[何日前, メニュー, メモ, 次回の提案]]]
+const SAMPLE = [
+  ["佐々木 ゆか", "ゆかさん", [0, 27], "仕事の人間関係", 3, [[1, "カウンセリング60分", "職場での伝え方に悩んでいる。最近は眠りも浅め", "伝え方の練習を一緒にする"], [29, "カウンセリング60分", "異動後の忙しさの話", "睡眠の記録をつけてみる"]]],
+  ["森 早苗", "", [2, 3], "眠りの質", 1, [[12, "アロマトリートメント90分", "肩まわりの張りが強い。寝る前にスマホを見がち", "寝る前の過ごし方を見直す"], [40, "アロマトリートメント90分", "初回。眠りが浅いとのこと", "香りの好みを確認"]]],
+  ["長谷川 恵", "めぐみさん", [5, 14], "自分の気持ちの整理", 0, [[8, "対面セッション60分", "転職するか迷っている。気持ちを書き出すと落ち着くとのこと", "書き出したものを一緒に見る"]]],
+  ["石井 直美", "", [1, 9], "家族との関係", null, [[46, "カウンセリング60分", "母親の介護が始まり疲れがたまっている", "息抜きの時間を決める"], [80, "カウンセリング60分", "家族の話", "―"]]],
+  ["前田 さくら", "さくらさん", [0, 4], "リラックス", 5, [[16, "アロマトリートメント60分", "繁忙期。首のこりを気にしている", "首まわり中心に"]]],
+  ["藤田 あおい", "", [7, 21], "これからの働き方", null, [[63, "オンラインセッション45分", "副業を始めたい気持ちがある", "やりたいことを3つ書いてくる"], [95, "オンラインセッション45分", "初回", "―"]]],
+  ["岡田 真由美", "真由美さん", [1, 28], "眠りの質", 2, [[21, "アロマトリートメント90分", "眠りは少し改善。朝のだるさが残る", "朝のストレッチを紹介する"]]],
+  ["後藤 瞳", "", [4, 2], "自分の気持ちの整理", 1, [[5, "対面セッション60分", "気持ちが前向きになってきたと話していた", "今の調子を保つ工夫"], [33, "対面セッション60分", "迷いが多い時期", "書き出しを続ける"]]],
+  ["村上 麻衣", "麻衣さん", [9, 11], "仕事の人間関係", null, [[120, "カウンセリング60分", "上司との関係が改善したとのこと", "―"]]],
+  ["近藤 由香里", "", [3, 18], "リラックス", 4, [[2, "アロマトリートメント60分", "引っ越しの準備で疲れ気味", "落ち着いたら90分で"]]],
+  ["坂本 千尋", "千尋さん", [6, 7], "これからの働き方", null, [[37, "オンラインセッション45分", "資格の勉強を始めた", "学習の進み具合を聞く"]]],
+  ["遠藤 美穂", "", [11, 30], "家族との関係", 6, [[10, "カウンセリング60分", "子どもの進学の話。少し気持ちが軽くなったとのこと", "進学後の生活リズムの話"]]]
+];
+
+// ---- 純粋関数 ----
+const parseDate = s => {
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(s || "").trim().replace(/\//g, "-"));
+  if (!m) return NaN;
+  const t = Date.UTC(+m[1], +m[2] - 1, +m[3]), d = new Date(t);
+  return d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3] ? t : NaN;
+};
+const ymd = t => new Date(t).toISOString().slice(0, 10);
+const daysBetween = (from, to) => Math.round((parseDate(to) - parseDate(from)) / 86400000);
+const todayStr = () => { const d = new Date(); return ymd(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); };
+const addDays = (s, n) => ymd(parseDate(s) + n * 86400000);
+const yen = n => Math.round(n).toLocaleString("ja-JP");
+const pad = n => String(n).padStart(2, "0");
+// 誕生日 "M/D" "MM-DD" "YYYY-MM-DD" → "MM-DD"（読めなければ ""）
+function parseBirthday(s) {
+  const t = String(s || "").trim().replace(/[月／/.]/g, "-").replace(/日$/, "");
+  const m = /^(?:\d{4}-)?(\d{1,2})-(\d{1,2})$/.exec(t);
+  if (!m) return "";
+  const mo = +m[1], d = +m[2];
+  return mo >= 1 && mo <= 12 && d >= 1 && d <= 31 ? pad(mo) + "-" + pad(d) : "";
+}
+const birthMonth = c => c.birthday ? +c.birthday.slice(0, 2) : 0;
+const nextMonthOf = m => m % 12 + 1;
+function lastSession(c) {
+  return (c.sessions || []).slice().sort((a, b) => parseDate(b.date) - parseDate(a.date))[0] || null;
+}
+function lastSent(c, kind) {
+  return (c.sent || []).filter(x => x.kind === kind).map(x => x.date).sort().pop() || "";
+}
+// そのお客様に今日出す連絡（未送信のもの）。送信済みは done: true
+function tasksFor(c, today, cfg) {
+  const out = [], last = lastSession(c), month = +today.slice(5, 7);
+  const days = last ? daysBetween(last.date, today) : null;
+  const sentAfterLast = kind => { const s = lastSent(c, kind); return !!s && (!last || parseDate(s) >= parseDate(last.date)); };
+  if (last && days === 1) out.push({ kind: "thanks", why: "昨日「" + last.menu + "」にお越しいただきました", done: sentAfterLast("thanks") });
+  if (c.tickets !== null && c.tickets !== undefined && c.tickets !== "" && Number(c.tickets) <= 1)
+    out.push({ kind: "tickets", why: "回数券の残りが" + Number(c.tickets) + "回です", done: sentAfterLast("tickets") });
+  if (last && days >= cfg.interval) out.push({ kind: "follow", why: "前回から" + days + "日（" + last.menu + "）", done: sentAfterLast("follow") });
+  const bm = birthMonth(c);
+  if (bm && (bm === month || bm === nextMonthOf(month))) {
+    const s = lastSent(c, "birthday");
+    out.push({ kind: "birthday", why: (bm === month ? "今月" : "来月") + "がお誕生月（" + bm + "/" + +c.birthday.slice(3) + "）",
+      done: !!s && daysBetween(s, today) < BIRTHDAY_COOLDOWN });
+  }
+  return out;
+}
+// 今日やることリスト: 未送信 → 種類の順 → 前回からの日数の長い方
+function todayTasks(list, today, cfg) {
+  const out = [];
+  list.forEach((c, i) => {
+    const last = lastSession(c), days = last ? daysBetween(last.date, today) : 0;
+    tasksFor(c, today, cfg).forEach(t => out.push(Object.assign({ index: i, name: c.name, days }, t)));
+  });
+  return out.sort((a, b) => (a.done - b.done) || (KINDS[a.kind].order - KINDS[b.kind].order) || (b.days - a.days));
+}
+function summarize(list, today, cfg) {
+  const month = +today.slice(5, 7), open = new Set(), openKinds = { thanks: 0, tickets: 0, follow: 0, birthday: 0 };
+  let overdue = 0, birthThis = 0, sessions = 0;
+  list.forEach((c, i) => {
+    sessions += (c.sessions || []).length;
+    if (birthMonth(c) === month) birthThis++;
+    const last = lastSession(c);
+    if (last && daysBetween(last.date, today) >= cfg.interval) overdue++;
+    tasksFor(c, today, cfg).forEach(t => { if (!t.done) { open.add(i); openKinds[t.kind]++; } });
+  });
+  return { all: list.length, sessions, today: open.size, openKinds, birthThis, overdue, lost: overdue * cfg.price };
+}
+const surname = name => String(name || "").trim().split(/[\s　]+/)[0] || "";
+function callName(c) { return (c.call || "").trim() || surname(c.name) + "様"; }
+function span(days) {
+  if (days < 14) return days + "日";
+  if (days < 60) return Math.round(days / 7) + "週間";
+  return Math.round(days / 30) + "か月";
+}
+function buildMessage(c, kind, today, cfg, style) {
+  const who = callName(c), salon = cfg.name || "当サロン", last = lastSession(c);
+  const next = last && last.next && last.next !== "―" ? last.next : "";
+  const days = last ? daysBetween(last.date, today) : 0, theme = c.theme || "その後のこと";
+  const line = style === "line";
+  if (kind === "thanks") {
+    const when = days === 1 ? "昨日は" : "先日は";
+    if (line) return `${who}\n${when}ありがとうございました。${salon}です。\n` +
+      (c.theme ? `お話しいただいた${c.theme}のこと、その後いかがですか？\n` : "その後、お変わりないですか？\n") +
+      (next ? `次回は「${next}」の時間を取れればと思っています。\n` : "") + "気になることがあれば、いつでもこちらにご連絡くださいね。";
+    return `${who}\n\n${when}${salon}にお越しいただき、ありがとうございました。\n` +
+      (c.theme ? `お話しいただいた${c.theme}のこと、その後いかがお過ごしでしょうか。\n` : "その後、お変わりなくお過ごしでしょうか。\n") +
+      (next ? `次回は「${next}」の時間をご一緒できればと考えております。\n` : "") +
+      `\n気になることや、お話ししたいことがあれば、いつでもお気軽にご連絡ください。\n\n${salon}`;
+  }
+  if (kind === "follow") {
+    if (line) return `${who}\nこんにちは、${salon}です。\n前回お会いしてから${span(days)}ほど経ちました。${theme}のこと、その後いかがですか？\n` +
+      "ご都合のよいときに、またゆっくりお話を聞かせてください。空いている日程をお送りすることもできます。";
+    return `${who}\n\nいつもありがとうございます。${salon}です。\n前回お越しいただいてから${span(days)}ほどが経ちました。\n` +
+      `${theme}について、その後いかがお過ごしでしょうか。` + (next ? `前回お話しした「${next}」も、よろしければ続きをご一緒させてください。` : "") +
+      `\n\nご都合のよい日時がございましたら、このメッセージへのご返信でお知らせください。\n${who}のお越しを、心よりお待ちしております。\n\n${salon}`;
+  }
+  if (kind === "birthday") {
+    const bm = birthMonth(c), bd = c.birthday ? +c.birthday.slice(3) : 0, month = +today.slice(5, 7);
+    if (!bm) return "（お誕生日が登録されていません。お客様の追加欄から誕生日を入れると、この文面が作れます）";
+    const head = bm === month && bd < +today.slice(8, 10) ? "今月はお誕生日でしたね。おめでとうございます。"
+      : bm === month || bm === nextMonthOf(month) ? `もうすぐ${bm}月${bd}日、お誕生日ですね。おめでとうございます。`
+      : `${bm}月${bd}日はお誕生日ですね。ひと足早く、おめでとうございます。`;
+    if (line) return `${who}\n${salon}です。\n${head}\n新しい一年が、${who}にとって穏やかで心地よいものになりますように。`;
+    return `${who}\n\nいつもありがとうございます。${salon}です。\n${head}\n` +
+      `いつもお越しいただき、たくさんのお話を聞かせていただけることを、とてもうれしく思っております。\n` +
+      `新しい一年が、${who}にとって穏やかで心地よいものになりますように。\n\n${salon}`;
+  }
+  const n = Number(c.tickets) || 0;
+  const state = n <= 0 ? "回数券をすべてご利用いただきました" : `回数券の残りが${n}回になりました`;
+  if (line) return `${who}\nいつもありがとうございます。${salon}です。\n${state}。\n` +
+    "続けてのご利用をご希望でしたら、次回ご来店時に更新のご案内をいたします。ご無理のない範囲でご検討ください。";
+  return `${who}\n\nいつもご利用いただき、ありがとうございます。${salon}です。\n${state}。\n` +
+    `これまで続けてお越しいただいたことに、心より感謝申し上げます。\n\n` +
+    `引き続きのご利用をご希望の場合は、次回ご来店時に更新のご案内をいたします。\nご無理のない範囲で、ご検討いただければ幸いです。\n\n${salon}`;
+}
+function parseImport(text) {
+  const out = [], bad = [];
+  String(text || "").split(/\r?\n/).forEach((line, i) => {
+    if (!line.trim()) return;
+    const f = line.split(/\t|,|、/).map(s => s.trim());
+    const last = f[3] ? f[3].replace(/\//g, "-") : "";
+    if (!f[0] || (f[3] && !Number.isFinite(parseDate(last)))) { bad.push(i + 1); return; }
+    out.push({ name: f[0], call: "", birthday: parseBirthday(f[1]), theme: f[2] || "", tickets: null, sent: [],
+      sessions: f[3] ? [{ date: ymd(parseDate(last)), menu: "（取り込み）", memo: "", next: "" }] : [] });
+  });
+  return { out, bad };
+}
+function sampleCustomers(today) {
+  const y = +today.slice(0, 4), m = +today.slice(5, 7);
+  return SAMPLE.map(([name, call, [mo, d], theme, tickets, sess]) => {
+    const bm = (m - 1 + mo) % 12 + 1;
+    const maxD = new Date(Date.UTC(y, bm, 0)).getUTCDate();
+    return { name, call, birthday: pad(bm) + "-" + pad(Math.min(d, maxD)), theme, tickets, sent: [],
+      sessions: sess.map(([ago, menu, memo, next]) => ({ date: addDays(today, -ago), menu, memo, next })) };
+  });
+}
+
+// ---- 画面 ----
+let state = null, selected = -1, kind = "follow", style = "line", query = "";
+const $ = id => document.getElementById(id);
+function el(tag, props, children) {
+  const e = document.createElement(tag);
+  Object.assign(e, props || {});
+  (children || []).forEach(c => e.append(c));
+  return e;
+}
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (s && Array.isArray(s.customers) && s.cfg) return s;
+  } catch (e) {}
+  return null;
+}
+function cfg() {
+  const c = state.cfg, n = (v, d) => { const x = Number(v); return Number.isFinite(x) && x > 0 ? x : d; };
+  return { name: c.name, price: n(c.price, 0), interval: n(c.interval, DEFAULT_CFG.interval) };
+}
+function setStat(id, value, unit) { $(id).replaceChildren(value, el("small", { textContent: unit })); }
+const fmt = s => s ? s.replace(/-/g, "/") : "―";
+
+function openKarte(i, k) {
+  selected = i;
+  if (k) kind = k;
+  else { const t = tasksFor(state.customers[i], todayStr(), cfg()).find(x => !x.done); kind = t ? t.kind : "follow"; }
+  render();
+  $("karte").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function render() {
+  const today = todayStr(), c = cfg(), r = summarize(state.customers, today, c);
+  setStat("sAll", r.all, "人"); $("sAllSub").textContent = "セッション記録 " + r.sessions + "件";
+  setStat("sToday", r.today, "人");
+  $("sTodaySub").textContent = Object.keys(KINDS).filter(k => r.openKinds[k]).map(k => KINDS[k].label + " " + r.openKinds[k]).join("・") || "すべて連絡済みです";
+  setStat("sBirth", r.birthThis, "人"); $("sBirthSub").textContent = +today.slice(5, 7) + "月生まれ";
+  setStat("sLost", yen(r.lost), "円"); $("sLostSub").textContent = c.interval + "日以上 " + r.overdue + "人 × 平均単価 " + yen(c.price) + "円";
+
+  const tasks = todayTasks(state.customers, today, c);
+  $("tasks").replaceChildren(...(tasks.length ? tasks.map(t => {
+    const b = el("button", { type: "button", className: "small" + (t.done ? "" : " primary"), textContent: t.done ? "送信済み" : "連絡文" });
+    b.addEventListener("click", () => openKarte(t.index, t.kind));
+    return el("li", { className: t.done ? "done" : "" }, [el("span", { className: "chip " + t.kind, textContent: KINDS[t.kind].label }),
+      el("span", { className: "who", textContent: state.customers[t.index].name }), el("span", { className: "why", textContent: t.why }), b]);
+  }) : [el("li", { className: "empty", textContent: "今日の連絡はありません。" })]));
+
+  const q = query.trim();
+  const listed = state.customers.map((cu, i) => ({ cu, i })).filter(x => !q || (x.cu.name + x.cu.theme + (x.cu.call || "")).includes(q))
+    .sort((a, b) => { const la = lastSession(a.cu), lb = lastSession(b.cu); return (lb ? parseDate(lb.date) : 0) - (la ? parseDate(la.date) : 0); });
+  $("clist").replaceChildren(...(listed.length ? listed.map(({ cu, i }) => {
+    const last = lastSession(cu), dots = el("span", { className: "dots" });
+    tasksFor(cu, today, c).filter(t => !t.done).forEach(t => dots.append(el("span", { className: "dot " + t.kind, title: KINDS[t.kind].label })));
+    const b = el("button", { type: "button", className: i === selected ? "sel" : "" }, [dots, el("span", { className: "n", textContent: cu.name }),
+      el("span", { className: "m", textContent: (cu.theme || "―") + " ／ " + (last ? "前回 " + fmt(last.date).slice(5) + "（" + daysBetween(last.date, today) + "日前）" : "来店記録なし") })]);
+    b.addEventListener("click", () => openKarte(i));
+    return el("li", {}, [b]);
+  }) : [el("li", { className: "empty", textContent: "該当するお客様はいません。" })]));
+  renderKarte(today, c);
+}
+
+function renderKarte(today, c) {
+  const cu = state.customers[selected];
+  $("kEmpty").hidden = !!cu; $("kBody").hidden = !cu;
+  if (!cu) return;
+  const last = lastSession(cu), hasTickets = cu.tickets !== null && cu.tickets !== undefined && cu.tickets !== "";
+  $("kName").textContent = cu.name;
+  $("kCall").textContent = "呼び方：" + callName(cu);
+  const facts = [["相談テーマ", cu.theme || "―"], ["お誕生日", cu.birthday ? +cu.birthday.slice(0, 2) + "/" + +cu.birthday.slice(3) : "―"],
+    ["回数券の残り", hasTickets ? cu.tickets + "回" : "なし"], ["前回", last ? daysBetween(last.date, today) + "日前" : "―"]];
+  $("kFacts").replaceChildren(...facts.map(([k, v], j) => el("div", {}, [el("div", { className: "k", textContent: k }),
+    el("div", { className: "v" + (j === 2 && hasTickets && Number(cu.tickets) <= 1 ? " low" : ""), textContent: v })])));
+  $("kMemo").textContent = last && last.memo ? last.memo : "―";
+  $("kNext").textContent = last && last.next ? last.next : "―";
+
+  $("kindSeg").replaceChildren(...Object.keys(KINDS).map(k => {
+    const b = el("button", { type: "button", textContent: KINDS[k].label, className: k === kind ? "on" : "" });
+    b.addEventListener("click", () => { kind = k; render(); });
+    return b;
+  }));
+  $("styleSeg").replaceChildren(...[["line", "LINE（短め）"], ["letter", "メール（丁寧）"]].map(([k, label]) => {
+    const b = el("button", { type: "button", textContent: label, className: k === style ? "on" : "" });
+    b.addEventListener("click", () => { style = k; render(); });
+    return b;
+  }));
+  $("mText").value = buildMessage(cu, kind, today, c, style);
+  $("mText").rows = style === "line" ? 6 : 11;
+  $("mToast").textContent = "";
+  const sent = (cu.sent || []).slice().sort((a, b) => parseDate(b.date) - parseDate(a.date)).slice(0, 4);
+  $("sentLog").textContent = sent.length ? "送った記録：" + sent.map(s => fmt(s.date).slice(5) + " " + KINDS[s.kind].label).join("、") : "送った記録：まだありません";
+
+  const hist = (cu.sessions || []).slice().sort((a, b) => parseDate(b.date) - parseDate(a.date));
+  $("kHist").replaceChildren(...(hist.length ? hist.map(s => el("li", {}, [
+    el("div", { className: "d", textContent: fmt(s.date) + "（" + daysBetween(s.date, today) + "日前）" }),
+    el("div", { className: "t", textContent: s.menu || "セッション" }),
+    el("div", { className: "memo", textContent: s.memo || "" }),
+    el("div", { className: "nx", textContent: s.next && s.next !== "―" ? "次回の提案：" + s.next : "" })])) : [el("li", { className: "empty", textContent: "まだ記録がありません。" })]));
+  $("sTicket").checked = hasTickets && Number(cu.tickets) > 0;
+  $("sTicket").disabled = !(hasTickets && Number(cu.tickets) > 0);
+}
+
+function init() {
+  const today = todayStr();
+  state = load() || { cfg: Object.assign({}, DEFAULT_CFG), customers: sampleCustomers(today) };
+  const bind = (id, key) => {
+    $(id).value = state.cfg[key];
+    $(id).addEventListener("input", () => { state.cfg[key] = $(id).value; save(); render(); });
+  };
+  bind("cName", "name"); bind("cPrice", "price"); bind("cInterval", "interval");
+  $("search").addEventListener("input", () => { query = $("search").value; render(); });
+  $("sDate").value = today;
+  $("sAdd").addEventListener("click", () => {
+    const cu = state.customers[selected]; if (!cu) return;
+    const date = $("sDate").value;
+    if (!Number.isFinite(parseDate(date))) { alert("日付を入れてください。"); return; }
+    cu.sessions = cu.sessions || [];
+    cu.sessions.push({ date, menu: $("sMenu").value.trim() || "セッション", memo: $("sMemo").value.trim(), next: $("sNext").value.trim() });
+    if ($("sTicket").checked && Number(cu.tickets) > 0) cu.tickets = Number(cu.tickets) - 1;
+    ["sMenu", "sMemo", "sNext"].forEach(id => { $(id).value = ""; });
+    $("addSessBox").open = false; kind = "thanks"; save(); render();
+  });
+  $("addBtn").addEventListener("click", () => {
+    const name = $("aName").value.trim();
+    if (!name) { alert("お名前を入れてください。"); return; }
+    const t = $("aTickets").value.trim();
+    state.customers.push({ name, call: $("aCall").value.trim(), birthday: parseBirthday($("aBirth").value), theme: $("aTheme").value.trim(),
+      tickets: t === "" ? null : Math.max(0, parseInt(t, 10) || 0), sent: [], sessions: [] });
+    ["aName", "aCall", "aBirth", "aTheme", "aTickets"].forEach(id => { $(id).value = ""; });
+    save(); openKarte(state.customers.length - 1);
+  });
+  $("csvBtn").addEventListener("click", () => {
+    const { out, bad } = parseImport($("csv").value);
+    state.customers.push(...out); save(); render();
+    $("csvMsg").textContent = out.length + "人を取り込みました" + (bad.length ? "（読めなかった行: " + bad.join(", ") + "行目）" : "");
+    if (out.length) $("csv").value = "";
+  });
+  $("copyBtn").addEventListener("click", async () => {
+    const t = $("mText");
+    try { await navigator.clipboard.writeText(t.value); } catch (e) { t.select(); document.execCommand("copy"); }
+    $("mToast").textContent = "コピーしました";
+  });
+  $("sentBtn").addEventListener("click", () => {
+    const cu = state.customers[selected]; if (!cu) return;
+    cu.sent = cu.sent || []; cu.sent.push({ kind, date: todayStr() });
+    save(); render(); $("mToast").textContent = KINDS[kind].label + "を送ったことを記録しました";
+  });
+  $("sample").addEventListener("click", () => {
+    if (!confirm("サンプルデータに戻します。入力したお客様は消えます。よろしいですか？")) return;
+    state = { cfg: Object.assign({}, DEFAULT_CFG), customers: sampleCustomers(todayStr()) };
+    $("cName").value = state.cfg.name; $("cPrice").value = state.cfg.price; $("cInterval").value = state.cfg.interval;
+    selected = -1; save(); render();
+  });
+  $("clear").addEventListener("click", () => {
+    if (!confirm("お客様をすべて消します。よろしいですか？")) return;
+    state.customers = []; selected = -1; save(); render();
+  });
+  $("print").addEventListener("click", () => window.print());
+  render();
+}
+if (typeof document !== "undefined") init();
+if (typeof module !== "undefined") module.exports = { parseBirthday, lastSession, tasksFor, todayTasks, summarize, buildMessage, parseImport, sampleCustomers, callName, daysBetween, DEFAULT_CFG };
+</script>
+</body>
+</html>

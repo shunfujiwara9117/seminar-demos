@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>案件・請求ボード</title>
+<style>
+  :root {
+    --ink: #1d2733; --sub: #5b6b7c; --line: #dfe5ec; --bg: #f5f7fa; --card: #fff;
+    --main: #0f6e6e; --main-soft: #e3f3f2; --accent: #d9662b; --accent-soft: #fdeee5;
+    --warn: #b7791f; --warn-soft: #fdf6e3; --gray-soft: #eef1f4;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif; font-size: 15px; line-height: 1.6; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 20px 16px 60px; }
+  header h1 { font-size: 26px; margin: 8px 0 4px; letter-spacing: .02em; }
+  header p { margin: 0; color: var(--sub); }
+  .badge { display: inline-block; background: var(--sub); color: #fff; border-radius: 999px;
+    font-size: 12px; padding: 1px 10px; margin-left: 6px; vertical-align: 6px; font-weight: 500; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-top: 18px; }
+  .card h2 { font-size: 18px; margin: 0 0 4px; }
+  .card .hint { color: var(--sub); font-size: 13px; margin: 0 0 12px; }
+  select, input[type=text], input[type=number], input[type=date], textarea {
+    font: inherit; color: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: #fff; width: 100%; min-width: 0; }
+  input[type=number] { text-align: right; }
+  textarea { resize: vertical; line-height: 1.7; }
+  select:focus, input:focus, textarea:focus { outline: 2px solid var(--main); outline-offset: 0; border-color: var(--main); }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 8px 14px; color: var(--ink); }
+  button.primary { background: var(--main); border-color: var(--main); color: #fff; font-weight: 600; }
+  button.accent { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+  button.small { padding: 4px 10px; font-size: 13px; }
+  .settings { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
+  .settings label, .form label { font-size: 12px; color: var(--sub); display: block; }
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .stat { border-radius: 10px; padding: 14px; background: var(--main-soft); }
+  .stat.accent { background: var(--accent-soft); }
+  .stat.warn { background: var(--warn-soft); }
+  .stat.gray { background: var(--gray-soft); }
+  .stat .label { font-size: 12px; color: var(--sub); }
+  .stat .num { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .stat .num small { font-size: 13px; font-weight: 500; margin-left: 2px; }
+  .stat .sub { font-size: 12px; color: var(--sub); }
+  .stat.accent .num { color: var(--accent); }
+  .stat.warn .num { color: var(--warn); }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .tabs button { border-radius: 999px; padding: 5px 14px; font-size: 13px; }
+  .tabs button.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.list th { text-align: left; font-size: 12px; color: var(--sub); font-weight: 500; padding: 6px; border-bottom: 1px solid var(--line); }
+  table.list td { padding: 9px 6px; border-bottom: 1px dashed var(--line); vertical-align: middle; }
+  table.list td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.list tr.sel td { background: var(--main-soft); }
+  .client { font-weight: 700; }
+  .title { font-size: 13px; color: var(--sub); }
+  .issue { display: block; font-size: 12px; font-weight: 700; margin-top: 2px; }
+  .issue.overdue { color: #c0392b; }
+  .issue.unbilled { color: var(--accent); }
+  .issue.monthly { color: var(--warn); }
+  .chip { display: inline-block; border-radius: 999px; padding: 1px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .chip.lead, .chip.won { background: var(--gray-soft); color: var(--sub); }
+  .chip.work { background: var(--main-soft); color: var(--main); }
+  .chip.delivered { background: var(--accent-soft); color: var(--accent); }
+  .chip.invoiced { background: var(--warn-soft); color: var(--warn); }
+  .chip.paid { background: var(--main); color: #fff; }
+  .chip.monthly { background: #e8e4f6; color: #5a4a9c; }
+  .ops { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+  .empty { color: var(--sub); text-align: center; padding: 24px 0; }
+  .msg { display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; }
+  .msg .who { font-size: 20px; font-weight: 700; }
+  .msg dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; margin: 10px 0 0; }
+  .msg dt { color: var(--sub); }
+  .msg dd { margin: 0; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
+  .seg button { border: 0; border-radius: 0; padding: 6px 14px; font-size: 13px; }
+  .seg button.on { background: var(--main); color: #fff; }
+  .msg-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+  .toast { color: var(--main); font-size: 13px; font-weight: 700; }
+  .add { display: grid; grid-template-columns: 1.2fr 1.4fr .9fr 1fr auto; gap: 8px; align-items: end; }
+  .add label { font-size: 12px; color: var(--sub); }
+  .form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form .wide { grid-column: 1 / -1; }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--main); font-weight: 600; }
+  .note { font-size: 12px; color: var(--sub); margin-top: 12px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  footer { margin-top: 24px; font-size: 12px; color: var(--sub); text-align: center; }
+  @media (max-width: 760px) {
+    .settings, .summary { grid-template-columns: 1fr 1fr; }
+    .settings > div:first-child { grid-column: 1 / -1; }
+    .msg, .form { grid-template-columns: 1fr; }
+    .add { grid-template-columns: 1fr 1fr; }
+    table.list .hide-sp { display: none; }
+    table.list td, table.list th { padding-left: 4px; padding-right: 4px; }
+    .ops { flex-direction: column; align-items: stretch; }
+    .stat .num { font-size: 22px; }
+  }
+  @media print {
+    body { background: #fff; } .toolbar, button, .tabs, details, #propCard { display: none !important; }
+    .card { break-inside: avoid; border-color: #bbb; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>案件・請求ボード<span class="badge">デモ</span></h1>
+    <p>案件の進み具合と請求・入金をひとつの画面で。請求漏れと入金遅れを自動で拾い出し、送る文面まで作ります。</p>
+  </header>
+
+  <section class="card">
+    <h2>事務所の設定</h2>
+    <p class="hint">文面と支払期限の計算に使います。事務所に合わせて変えられます。</p>
+    <div class="settings">
+      <div><label for="cName">事務所・会社の名前</label><input id="cName" type="text"></div>
+      <div><label for="cSite">お支払い期限（請求日から何日）</label><input id="cSite" type="number" min="1" step="1" inputmode="numeric"></div>
+      <div><label for="cPerson">担当者名（文面の署名）</label><input id="cPerson" type="text"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>お金の状況</h2>
+    <div class="summary">
+      <div class="stat accent"><div class="label">まだ請求していない金額</div><div class="num" id="sUnbilled">0<small>円</small></div><div class="sub" id="sUnbilledSub"></div></div>
+      <div class="stat warn"><div class="label">まだ入金されていない金額</div><div class="num" id="sUnpaid">0<small>円</small></div><div class="sub" id="sUnpaidSub"></div></div>
+      <div class="stat"><div class="label">今月の入金予定</div><div class="num" id="sThisMonth">0<small>円</small></div><div class="sub" id="sThisMonthSub"></div></div>
+      <div class="stat gray"><div class="label">進行中の案件</div><div class="num" id="sWork">0<small>件</small></div><div class="sub" id="sWorkSub"></div></div>
+    </div>
+    <p class="note">金額はすべて税抜です。「今月の入金予定」は、支払期限が今月中で、まだ入金されていないものの合計です（期限を過ぎたものは「未入金」に含みます）。</p>
+  </section>
+
+  <section class="card">
+    <h2>案件一覧</h2>
+    <p class="hint">請求漏れ・入金遅れのある案件が一番上に出ます。「次へ」を押すとステージが進み、日付は今日で自動記入されます。</p>
+    <div class="tabs" id="tabs"></div>
+    <table class="list">
+      <thead><tr><th>お客様・案件</th><th class="n hide-sp">金額（税抜）</th><th>ステージ</th><th class="hide-sp">日付</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <details>
+      <summary>＋ 案件を追加する</summary>
+      <div class="add" style="margin-top:10px">
+        <div><label for="aClient">お客様</label><input id="aClient" type="text" placeholder="例）株式会社サンプル"></div>
+        <div><label for="aTitle">案件名</label><input id="aTitle" type="text" placeholder="例）業務改善コンサル"></div>
+        <div><label for="aAmount">金額（税抜）</label><input id="aAmount" type="number" min="0" step="10000" inputmode="numeric"></div>
+        <div><label for="aKind">種類</label><select id="aKind"><option value="spot">スポット案件</option><option value="monthly">月額顧問（毎月）</option></select></div>
+        <button class="primary" id="addBtn" type="button">追加</button>
+      </div>
+    </details>
+    <details>
+      <summary>＋ Excel・会計ソフトの一覧をまとめて取り込む（貼り付け）</summary>
+      <p class="hint" style="margin-top:8px">1行に1件、「お客様, 案件名, 金額, ステージ, 納品日, 請求日, 入金日」の順でカンマ区切り（タブ区切りも可）。
+        ステージは 商談中／受注／作業中／納品済／請求済／入金済／顧問 のいずれか。日付は空欄でもかまいません。<br>カンマ区切りで書くときは、金額に「,」を入れないでください（Excelからのコピーならそのままで大丈夫です）。</p>
+      <textarea id="csv" rows="4" placeholder="株式会社サンプル, 業務改善コンサル, 300000, 納品済, 2026-09-10, , "></textarea>
+      <div class="msg-actions"><button class="primary" id="csvBtn" type="button">取り込む</button><span class="toast" id="csvMsg"></span></div>
+    </details>
+  </section>
+
+  <section class="card" id="msgCard">
+    <h2>送る文面</h2>
+    <div id="msgEmpty" class="empty">上の一覧で「文面」を押すと、請求書送付や入金確認のメール文がここに出ます。</div>
+    <div class="msg" id="msgBody" hidden>
+      <div>
+        <div class="who" id="mWho"></div>
+        <dl id="mInfo"></dl>
+      </div>
+      <div>
+        <div class="seg" id="kindSeg"></div>
+        <textarea id="mText" rows="12" aria-label="文面"></textarea>
+        <div class="msg-actions">
+          <button class="primary" id="copyBtn" type="button">文面をコピー</button>
+          <span class="toast" id="mToast"></span>
+        </div>
+        <p class="note">金額は税込（消費税10%・1円未満切り捨て）で表示しています。送る前に、請求書の内容と合っているかを必ずご確認ください。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="propCard">
+    <h2>打ち合わせメモ → 提案書の下書き</h2>
+    <p class="hint">打ち合わせで聞いたことを箇条書きで入れるだけで、提案書の骨組みを組み立てます。</p>
+    <div class="form">
+      <div><label for="pClient">お客様</label><input id="pClient" type="text"></div>
+      <div><label for="pTiming">希望の時期</label><input id="pTiming" type="text"></div>
+      <div class="wide"><label for="pIssue">現状の課題（1行に1つ）</label><textarea id="pIssue" rows="3"></textarea></div>
+      <div class="wide"><label for="pWant">先方のご要望（1行に1つ）</label><textarea id="pWant" rows="2"></textarea></div>
+      <div><label for="pBudget">予算感</label><input id="pBudget" type="text"></div>
+      <div></div>
+      <div class="wide"><label for="pPlan">こちらからの提案（1行に1つ）</label><textarea id="pPlan" rows="3"></textarea></div>
+    </div>
+    <div class="msg-actions"><button class="accent" id="propBtn" type="button">提案書の下書きを作る</button></div>
+    <div id="propOut" hidden>
+      <textarea id="propText" rows="20" style="margin-top:12px" aria-label="提案書の下書き"></textarea>
+      <div class="msg-actions"><button class="primary" id="propCopy" type="button">下書きをコピー</button><span class="toast" id="pToast"></span></div>
+      <p class="note">メモの内容をテンプレートに当てはめて組み立てた下書きです。数字・スケジュール・表現は、提出前に必ず見直してください。</p>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <button id="sample" type="button">サンプルデータに戻す</button>
+    <button id="clear" type="button">案件をすべて消す</button>
+    <button id="print" type="button">一覧を印刷</button>
+  </div>
+
+  <footer>
+    入力した内容は、この端末のブラウザの中だけに保存されます。外部には一切送信されません。<br>
+    表示しているお客様・案件はすべて架空のサンプルです。<br>
+    © 合同会社ウルノワ ／ 無断での転載・再配布はご遠慮ください。
+  </footer>
+</div>
+
+<script>
+"use strict";
+const STORE_KEY = "btob-billing-v1";
+const STAGES = [["lead", "商談中"], ["won", "受注"], ["work", "作業中"], ["delivered", "納品済"], ["invoiced", "請求済"], ["paid", "入金済"]];
+const STAGE_LABEL = Object.fromEntries(STAGES);
+const NEXT_LABEL = { lead: "受注した", won: "作業開始", work: "納品した", delivered: "請求した", invoiced: "入金確認" };
+const ISSUE_ORDER = { overdue: 0, unbilled: 1, monthly: 2 };
+const TAX = 0.1;
+const DEFAULT_CFG = { name: "みらい経営コンサルティング", site: 30, person: "担当 山田" };
+const DEFAULT_MEMO = {
+  client: "株式会社あおば物産", timing: "来月から3か月",
+  issue: "受注・請求の管理がExcelと紙に分かれている\n担当者によって見積の出し方がばらばら\n月末の請求作業に丸2日かかっている",
+  want: "月末の作業を半日で終わらせたい\n社長が数字をすぐ見られるようにしたい",
+  budget: "月10万円前後", plan: "受注〜請求の流れを1つの台帳にまとめる\n見積書のひな形を統一し、自動で作れるようにする\n月次の数字を1画面で見られるようにする"
+};
+// サンプル: [お客様, 案件名, 金額, ステージ, 納品(何日前), 請求(何日前), 入金(何日前)]
+const SAMPLE = [
+  ["株式会社あおば物産", "業務フロー改善コンサル", 450000, "delivered", 12],
+  ["ひかり食品株式会社", "補助金申請サポート", 300000, "invoiced", 50, 45],
+  ["株式会社つばさ設計", "就業規則の見直し", 180000, "delivered", 3],
+  ["なぎさ食堂", "開業支援パック", 200000, "invoiced", 38, 35],
+  // 請求日を支払サイトちょうど前にして、期限が常に「今日」＝今月の入金予定に入るようにする
+  ["こだま印刷株式会社", "Webサイト改善提案", 250000, "invoiced", 32, 30],
+  ["ほしの建設株式会社", "業務システム導入支援", 800000, "work"],
+  ["いずみ商店", "経営計画の策定", 350000, "won"],
+  ["たちばな物流株式会社", "人事評価制度の設計", 600000, "lead"],
+  ["かえで保育園", "助成金申請サポート", 150000, "paid", 45, 40, 10]
+];
+// 月額顧問: [お客様, 案件名, 月額, 請求済みの月(0=今月,1=先月), 入金済みか]
+const SAMPLE_MONTHLY = [
+  ["みなと不動産株式会社", "月額顧問（経営相談）", 50000, 1, true],
+  ["さくら歯科クリニック", "月額顧問（労務）", 30000, 0, false],
+  ["ことぶき電機株式会社", "月額顧問（財務）", 80000, 0, true]
+];
+
+// ---- 日付 ----
+const parseDate = s => { const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(s || "").trim().replace(/\//g, "-")); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : NaN; };
+const ymd = t => new Date(t).toISOString().slice(0, 10);
+const daysBetween = (from, to) => Math.round((parseDate(to) - parseDate(from)) / 86400000);
+const todayStr = () => { const d = new Date(); return ymd(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); };
+const addDays = (s, n) => ymd(parseDate(s) + n * 86400000);
+const monthOf = s => String(s || "").slice(0, 7);
+const firstOfMonth = (s, back) => { const d = new Date(parseDate(s)); return ymd(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - (back || 0), 1)); };
+const yen = n => Math.round(n).toLocaleString("ja-JP");
+const withTax = n => Math.floor(n * (1 + TAX));
+const jpDate = s => { const t = parseDate(s); if (!Number.isFinite(t)) return "―"; const d = new Date(t); return (d.getUTCMonth() + 1) + "月" + d.getUTCDate() + "日"; };
+
+// ---- 純粋関数 ----
+// 請求済みで未入金の請求（スポットは請求日、顧問は今回請求分）の {billed, due}。なければ null
+function openInvoice(d, cfg) {
+  if (d.monthly) {
+    if (!d.billedDate || d.paidMonth === monthOf(d.billedDate)) return null;
+    return { billed: d.billedDate, due: addDays(d.billedDate, cfg.site) };
+  }
+  if (d.stage !== "invoiced" || !d.invoiced) return null;
+  return { billed: d.invoiced, due: addDays(d.invoiced, cfg.site) };
+}
+// 要対応: 入金遅れ（期限の翌日から）/ 納品済みで未請求 / 顧問の今月分が未請求
+function issuesOf(d, today, cfg) {
+  const out = [], inv = openInvoice(d, cfg);
+  if (inv && daysBetween(inv.due, today) > 0) out.push({ type: "overdue", days: daysBetween(inv.due, today), text: "入金遅れ（期限から" + daysBetween(inv.due, today) + "日）" });
+  if (!d.monthly && d.stage === "delivered") {
+    const days = d.delivered ? Math.max(0, daysBetween(d.delivered, today)) : 0;
+    out.push({ type: "unbilled", days, text: "請求漏れ（納品から" + days + "日）" });
+  }
+  if (d.monthly && monthOf(d.billedDate) < monthOf(today)) out.push({ type: "monthly", days: 0, text: "今月分が未請求" });
+  return out;
+}
+function summarize(list, today, cfg) {
+  const r = { unbilled: 0, unbilledN: 0, unpaid: 0, unpaidN: 0, overdue: 0, overdueN: 0, thisMonth: 0, thisMonthN: 0, work: 0, lead: 0, issues: 0 };
+  for (const d of list) {
+    const amt = Number(d.amount) || 0, iss = issuesOf(d, today, cfg);
+    if (iss.length) r.issues++;
+    if (iss.some(i => i.type === "unbilled" || i.type === "monthly")) { r.unbilled += amt; r.unbilledN++; }
+    const inv = openInvoice(d, cfg);
+    if (inv) {
+      r.unpaid += amt; r.unpaidN++;
+      if (daysBetween(inv.due, today) > 0) { r.overdue += amt; r.overdueN++; }
+      else if (monthOf(inv.due) === monthOf(today)) { r.thisMonth += amt; r.thisMonthN++; }
+    }
+    if (!d.monthly && (d.stage === "won" || d.stage === "work")) r.work++;
+    if (!d.monthly && d.stage === "lead") r.lead++;
+  }
+  return r;
+}
+function sortDeals(list, today, cfg) {
+  const rank = d => { const iss = issuesOf(d, today, cfg); return iss.length ? Math.min(...iss.map(i => ISSUE_ORDER[i.type])) : 9; };
+  const stageIdx = d => d.monthly ? 2.5 : STAGES.findIndex(([k]) => k === d.stage);
+  return list.map(d => ({ d, iss: issuesOf(d, today, cfg), r: rank(d) }))
+    .sort((a, b) => (a.r - b.r) || (Math.max(0, ...b.iss.map(i => i.days)) - Math.max(0, ...a.iss.map(i => i.days)))
+      || (stageIdx(b.d) - stageIdx(a.d)) || ((Number(b.d.amount) || 0) - (Number(a.d.amount) || 0)));
+}
+// ステージを1つ進める（日付は today）。元のオブジェクトは変えずに新しいものを返す
+function advance(d, today) {
+  const n = Object.assign({}, d);
+  if (d.monthly) {
+    if (monthOf(d.billedDate) < monthOf(today)) n.billedDate = today;
+    else if (n.paidMonth !== monthOf(d.billedDate)) n.paidMonth = monthOf(d.billedDate);
+    return n;
+  }
+  const i = STAGES.findIndex(([k]) => k === d.stage);
+  if (i < 0 || i >= STAGES.length - 1) return n;
+  n.stage = STAGES[i + 1][0];
+  if (n.stage === "delivered") n.delivered = today;
+  if (n.stage === "invoiced") n.invoiced = today;
+  if (n.stage === "paid") n.paid = today;
+  return n;
+}
+function nextLabel(d, today) {
+  if (d.monthly) return monthOf(d.billedDate) < monthOf(today) ? "今月分を請求した" : (d.paidMonth !== monthOf(d.billedDate) ? "入金確認" : "");
+  return NEXT_LABEL[d.stage] || "";
+}
+function buildInvoiceMail(d, cfg, today) {
+  const billed = d.monthly ? (monthOf(d.billedDate) === monthOf(today) ? d.billedDate : today) : (d.invoiced || today);
+  const due = addDays(billed, cfg.site);
+  const what = d.monthly ? (Number(monthOf(billed).slice(5)) + "月分の" + d.title) : d.title;
+  return `${d.client}\nご担当者様\n\nいつもお世話になっております。${cfg.name}の${cfg.person}です。\n\n` +
+    `${what}につきまして、請求書をお送りいたします。\n添付の請求書をご確認いただけますと幸いです。\n\n` +
+    `■ ご請求金額：${yen(withTax(d.amount))}円（税込）\n■ お支払い期限：${jpDate(due)}\n\n` +
+    `ご不明な点がございましたら、お気軽にお申し付けください。\n今後ともどうぞよろしくお願いいたします。\n\n${cfg.name}\n${cfg.person}`;
+}
+function buildReminderMail(d, cfg, today) {
+  const inv = openInvoice(d, cfg) || { billed: today, due: today };
+  return `${d.client}\nご担当者様\n\nいつもお世話になっております。${cfg.name}の${cfg.person}です。\n\n` +
+    `${jpDate(inv.billed)}にお送りいたしました「${d.title}」の請求書につきまして、\n` +
+    `${jpDate(inv.due)}のお支払い期限を過ぎておりましたので、念のためご連絡を差し上げました。\n\n` +
+    `■ ご請求金額：${yen(withTax(d.amount))}円（税込）\n\n` +
+    `ご多忙のところ恐縮ですが、ご確認いただけますと幸いです。\n` +
+    `なお、本メールと行き違いでお手続きいただいている場合は、何卒ご容赦ください。\n` +
+    `請求書の再送が必要な場合も、お気軽にお申し付けください。\n\n${cfg.name}\n${cfg.person}`;
+}
+const lines = s => String(s || "").split(/\r?\n/).map(x => x.replace(/^[・\-\s　]+/, "").trim()).filter(Boolean);
+function buildProposal(m, cfg) {
+  const issue = lines(m.issue), want = lines(m.want), plan = lines(m.plan);
+  const bl = (a, empty) => a.length ? a.map(x => "・" + x).join("\n") : "・" + empty;
+  const steps = plan.length ? plan.map((x, i) => `STEP${i + 1}　${x}`).join("\n") : "STEP1　現状の詳しいヒアリング";
+  return `${m.client || "（お客様名）"} 御中\n\n【ご提案書（下書き）】\n${cfg.name}\n\n` +
+    `1. ご提案の背景\n先日はお打ち合わせのお時間をいただき、ありがとうございました。\nお伺いした内容をもとに、次のとおりご提案いたします。\n` +
+    (want.length ? `今回のご要望は「${want[0]}」${want.length > 1 ? "をはじめとする" + want.length + "点" : ""}と理解しております。\n` : "") +
+    `\n2. 課題の整理\n${bl(issue, "（課題を記入）")}\n` +
+    (want.length ? `\nご要望\n${bl(want, "")}\n` : "") +
+    `\n3. ご提案内容\n${bl(plan, "（提案内容を記入）")}\n` +
+    `\n4. 進め方とスケジュール\n${steps}\n（ご希望の時期：${m.timing || "ご相談のうえ決定"}）\n` +
+    `\n5. お見積もり概算\nご予算感（${m.budget || "未確認"}）を踏まえ、内容を確定したうえで正式なお見積もりをお出しいたします。\n` +
+    `\n6. 次のステップ\n・本提案の内容について、ご意見・ご要望をお聞かせください\n・内容が固まり次第、正式なお見積もりとスケジュールをお送りいたします\n`;
+}
+const STAGE_BY_LABEL = Object.fromEntries(STAGES.map(([k, v]) => [v, k]));
+function parseImport(text, today) {
+  const out = [], bad = [];
+  String(text || "").split(/\r?\n/).forEach((line, i) => {
+    if (!line.trim()) return;
+    // Excelからのコピー（タブ区切り）は金額の桁区切りカンマを残せるよう、タブだけで分ける
+    const f = line.split(line.includes("\t") ? /\t/ : /,/).map(s => s.trim());
+    const amount = Number(String(f[2] || "").replace(/[,円¥\s]/g, ""));
+    const monthly = /顧問|毎月|月額/.test(f[3] || "");
+    const stage = monthly ? "work" : STAGE_BY_LABEL[f[3]];
+    if (!f[0] || !Number.isFinite(amount) || amount <= 0 || !stage) { bad.push(i + 1); return; }
+    const dt = s => { const t = parseDate(String(s || "").replace(/\//g, "-")); return Number.isFinite(t) ? ymd(t) : ""; };
+    const d = { client: f[0], title: f[1] || "", amount, stage, monthly, delivered: dt(f[4]), invoiced: dt(f[5]), paid: dt(f[6]) };
+    if (monthly) { d.billedDate = d.invoiced; d.paidMonth = d.paid ? monthOf(d.invoiced) : ""; }
+    // 日付が空のときは今日で補う（期限の計算ができないため）
+    if (!monthly && stage === "invoiced" && !d.invoiced) d.invoiced = today;
+    out.push(d);
+  });
+  return { out, bad };
+}
+function sampleDeals(today) {
+  const at = n => n == null ? "" : addDays(today, -n);
+  const spot = SAMPLE.map(([client, title, amount, stage, del, inv, paid]) =>
+    ({ client, title, amount, stage, monthly: false, delivered: at(del), invoiced: at(inv), paid: at(paid) }));
+  const mon = SAMPLE_MONTHLY.map(([client, title, amount, back, paid]) => {
+    const billedDate = firstOfMonth(today, back);
+    return { client, title, amount, stage: "work", monthly: true, billedDate, paidMonth: paid ? monthOf(billedDate) : "" };
+  });
+  return spot.concat(mon);
+}
+
+// ---- 画面 ----
+let state = null, selected = -1, filter = "issue", kind = "invoice";
+const $ = id => document.getElementById(id);
+function el(tag, props, children) {
+  const e = document.createElement(tag);
+  Object.assign(e, props || {});
+  (children || []).forEach(c => e.append(c));
+  return e;
+}
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (s && Array.isArray(s.deals) && s.cfg && s.memo) return s;
+  } catch (e) {}
+  return null;
+}
+function fresh() { return { cfg: Object.assign({}, DEFAULT_CFG), memo: Object.assign({}, DEFAULT_MEMO), deals: sampleDeals(todayStr()) }; }
+function cfg() {
+  const c = state.cfg, site = Number(c.site);
+  return { name: c.name || "当事務所", person: c.person || "", site: Number.isFinite(site) && site > 0 ? Math.round(site) : DEFAULT_CFG.site };
+}
+function setStat(id, value, unit) { $(id).replaceChildren(value, el("small", { textContent: unit })); }
+function dateCell(d, today) {
+  if (d.monthly) return d.billedDate ? "請求 " + jpDate(d.billedDate) + (d.paidMonth === monthOf(d.billedDate) ? "・入金済" : "") : "―";
+  if (d.stage === "paid") return "入金 " + jpDate(d.paid);
+  if (d.stage === "invoiced") return "期限 " + jpDate(addDays(d.invoiced, cfg().site));
+  if (d.stage === "delivered") return "納品 " + jpDate(d.delivered);
+  return "―";
+}
+
+const TABS = [["issue", "要対応"], ["active", "進行中"], ["billing", "請求・入金待ち"], ["monthly", "顧問"], ["paid", "入金済"], ["all", "すべて"]];
+function match(x) {
+  const d = x.d;
+  if (filter === "all") return true;
+  if (filter === "issue") return x.iss.length > 0;
+  if (filter === "monthly") return !!d.monthly;
+  if (d.monthly) return false;
+  if (filter === "active") return ["lead", "won", "work"].includes(d.stage);
+  if (filter === "billing") return ["delivered", "invoiced"].includes(d.stage);
+  return d.stage === "paid";
+}
+function render() {
+  const today = todayStr(), c = cfg(), r = summarize(state.deals, today, c);
+  setStat("sUnbilled", yen(r.unbilled), "円"); $("sUnbilledSub").textContent = r.unbilledN + "件（納品済み＋顧問の今月分）";
+  setStat("sUnpaid", yen(r.unpaid), "円"); $("sUnpaidSub").textContent = r.unpaidN + "件 ／ うち期限切れ " + yen(r.overdue) + "円（" + r.overdueN + "件）";
+  setStat("sThisMonth", yen(r.thisMonth), "円"); $("sThisMonthSub").textContent = r.thisMonthN + "件（今月が期限の請求）";
+  setStat("sWork", r.work, "件"); $("sWorkSub").textContent = "受注・作業中 ／ 商談中 " + r.lead + "件";
+
+  $("tabs").replaceChildren(...TABS.map(([k, label]) => {
+    const b = el("button", { type: "button", textContent: label + (k === "issue" ? "（" + r.issues + "）" : ""), className: k === filter ? "on" : "" });
+    b.addEventListener("click", () => { filter = k; render(); });
+    return b;
+  }));
+  const rows = sortDeals(state.deals, today, c).filter(match);
+  $("rows").replaceChildren(...(rows.length ? rows.map(x => {
+    const d = x.d, i = state.deals.indexOf(d);
+    const name = el("td", {}, [el("div", { className: "client", textContent: d.client }), el("div", { className: "title", textContent: d.title + "　" + yen(d.amount) + "円" + (d.monthly ? "/月" : "") })]);
+    x.iss.forEach(s => name.append(el("span", { className: "issue " + s.type, textContent: "● " + s.text })));
+    const chip = d.monthly ? el("span", { className: "chip monthly", textContent: "顧問" }) : el("span", { className: "chip " + d.stage, textContent: STAGE_LABEL[d.stage] });
+    const ops = el("div", { className: "ops" });
+    const nl = nextLabel(d, today);
+    if (nl) {
+      const nb = el("button", { type: "button", className: "small primary", textContent: nl });
+      nb.addEventListener("click", () => { state.deals[i] = advance(d, today); save(); render(); });
+      ops.append(nb);
+    }
+    if (d.monthly || ["delivered", "invoiced"].includes(d.stage)) {
+      const mb = el("button", { type: "button", className: "small", textContent: "文面" });
+      mb.addEventListener("click", () => {
+        selected = i; kind = x.iss.some(s => s.type === "overdue") ? "remind" : "invoice"; render();
+        $("msgCard").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      ops.append(mb);
+    }
+    const del = el("button", { type: "button", className: "small hide-sp", textContent: "削除", ariaLabel: d.client + "の案件を削除" });
+    del.addEventListener("click", () => {
+      if (!confirm(d.client + "「" + d.title + "」を削除します。よろしいですか？")) return;
+      state.deals.splice(i, 1); selected = selected === i ? -1 : selected > i ? selected - 1 : selected; save(); render();
+    });
+    ops.append(del);
+    return el("tr", { className: i === selected ? "sel" : "" }, [name,
+      el("td", { className: "n hide-sp", textContent: yen(d.amount) }), el("td", {}, [chip]),
+      el("td", { className: "hide-sp", textContent: dateCell(d, today) }), el("td", { className: "n" }, [ops])]);
+  }) : [el("tr", {}, [el("td", { colSpan: 5, className: "empty", textContent: filter === "issue" ? "対応が必要な案件はありません。" : "該当する案件はありません。" })])]));
+  renderMsg(today, c);
+}
+
+function renderMsg(today, c) {
+  const d = state.deals[selected];
+  $("msgEmpty").hidden = !!d; $("msgBody").hidden = !d;
+  if (!d) return;
+  const inv = openInvoice(d, c), iss = issuesOf(d, today, c);
+  $("mWho").textContent = d.client;
+  const info = [["案件", d.title], ["金額", yen(d.amount) + "円（税込 " + yen(withTax(d.amount)) + "円）" + (d.monthly ? "／月" : "")],
+    ["ステージ", d.monthly ? "月額顧問" : STAGE_LABEL[d.stage]], ["請求日", inv ? jpDate(inv.billed) : "―"],
+    ["支払期限", inv ? jpDate(inv.due) : "―"], ["要対応", iss.length ? iss.map(s => s.text).join("／") : "なし"]];
+  $("mInfo").replaceChildren(...info.flatMap(([k, v]) => [el("dt", { textContent: k }), el("dd", { textContent: v })]));
+  $("kindSeg").replaceChildren(...[["invoice", "請求書の送付"], ["remind", "入金確認のご連絡"]].map(([k, label]) => {
+    const b = el("button", { type: "button", textContent: label, className: k === kind ? "on" : "" });
+    b.addEventListener("click", () => { kind = k; render(); });
+    return b;
+  }));
+  $("mText").value = kind === "remind" ? buildReminderMail(d, c, today) : buildInvoiceMail(d, c, today);
+  $("mToast").textContent = "";
+}
+
+async function copy(t, toast) {
+  try { await navigator.clipboard.writeText(t.value); } catch (e) { t.select(); document.execCommand("copy"); }
+  toast.textContent = "コピーしました";
+}
+const MEMO_FIELDS = [["pClient", "client"], ["pTiming", "timing"], ["pIssue", "issue"], ["pWant", "want"], ["pBudget", "budget"], ["pPlan", "plan"]];
+function fillInputs() {
+  [["cName", "name"], ["cSite", "site"], ["cPerson", "person"]].forEach(([id, k]) => { $(id).value = state.cfg[k]; });
+  MEMO_FIELDS.forEach(([id, k]) => { $(id).value = state.memo[k] || ""; });
+}
+function init() {
+  state = load() || fresh();
+  fillInputs();
+  [["cName", "name"], ["cSite", "site"], ["cPerson", "person"]].forEach(([id, k]) =>
+    $(id).addEventListener("input", () => { state.cfg[k] = $(id).value; save(); render(); }));
+  MEMO_FIELDS.forEach(([id, k]) => $(id).addEventListener("input", () => { state.memo[k] = $(id).value; save(); }));
+  $("addBtn").addEventListener("click", () => {
+    const client = $("aClient").value.trim(), amount = Number($("aAmount").value);
+    if (!client || !(amount > 0)) { alert("お客様と金額を入れてください。"); return; }
+    const monthly = $("aKind").value === "monthly";
+    state.deals.push({ client, title: $("aTitle").value.trim(), amount, stage: monthly ? "work" : "lead", monthly,
+      delivered: "", invoiced: "", paid: "", billedDate: "", paidMonth: "" });
+    $("aClient").value = ""; $("aTitle").value = ""; $("aAmount").value = ""; filter = "all"; save(); render();
+  });
+  $("csvBtn").addEventListener("click", () => {
+    const { out, bad } = parseImport($("csv").value, todayStr());
+    state.deals.push(...out); save(); filter = "all"; render();
+    $("csvMsg").textContent = out.length + "件を取り込みました" + (bad.length ? "（読めなかった行: " + bad.join(", ") + "行目）" : "");
+    if (out.length) $("csv").value = "";
+  });
+  $("copyBtn").addEventListener("click", () => copy($("mText"), $("mToast")));
+  $("propBtn").addEventListener("click", () => {
+    $("propText").value = buildProposal(state.memo, cfg()); $("propOut").hidden = false; $("pToast").textContent = "";
+  });
+  $("propCopy").addEventListener("click", () => copy($("propText"), $("pToast")));
+  $("sample").addEventListener("click", () => {
+    if (!confirm("サンプルデータに戻します。入力した案件とメモは消えます。よろしいですか？")) return;
+    state = fresh(); fillInputs(); selected = -1; filter = "issue"; $("propOut").hidden = true; save(); render();
+  });
+  $("clear").addEventListener("click", () => {
+    if (!confirm("案件をすべて消します。よろしいですか？")) return;
+    state.deals = []; selected = -1; save(); render();
+  });
+  $("print").addEventListener("click", () => window.print());
+  render();
+}
+if (typeof document !== "undefined") init();
+if (typeof module !== "undefined") module.exports = { issuesOf, openInvoice, summarize, sortDeals, advance, buildInvoiceMail, buildReminderMail, buildProposal, parseImport, sampleDeals, daysBetween, DEFAULT_CFG, DEFAULT_MEMO };
+</script>
+</body>
+</html>

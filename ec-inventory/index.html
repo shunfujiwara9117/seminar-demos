@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>在庫・発注アラート</title>
+<style>
+  :root {
+    --ink: #1d2733; --sub: #5b6b7c; --line: #dfe5ec; --bg: #f5f7fa; --card: #fff;
+    --main: #0f6e6e; --main-soft: #e3f3f2; --accent: #d9662b; --accent-soft: #fdeee5;
+    --warn: #b7791f; --warn-soft: #fdf6e3; --gray-soft: #eef1f4; --danger: #b42318; --danger-soft: #fdecea;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif; font-size: 15px; line-height: 1.6; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 20px 16px 60px; }
+  header h1 { font-size: 26px; margin: 8px 0 4px; letter-spacing: .02em; }
+  header p { margin: 0; color: var(--sub); }
+  .badge { display: inline-block; background: var(--sub); color: #fff; border-radius: 999px;
+    font-size: 12px; padding: 1px 10px; margin-left: 6px; vertical-align: 6px; font-weight: 500; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-top: 18px; }
+  .card h2 { font-size: 18px; margin: 0 0 4px; }
+  .card .hint { color: var(--sub); font-size: 13px; margin: 0 0 12px; }
+  select, input[type=text], input[type=number], textarea {
+    font: inherit; color: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: #fff; width: 100%; min-width: 0; }
+  input[type=number] { text-align: right; }
+  textarea { resize: vertical; line-height: 1.7; }
+  select:focus, input:focus, textarea:focus { outline: 2px solid var(--main); outline-offset: 0; border-color: var(--main); }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 8px 14px; color: var(--ink); }
+  button.primary { background: var(--main); border-color: var(--main); color: #fff; font-weight: 600; }
+  button.small { padding: 4px 10px; font-size: 13px; }
+  .settings { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
+  .settings label, .form label { font-size: 12px; color: var(--sub); display: block; }
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .stat { border-radius: 10px; padding: 14px; background: var(--main-soft); }
+  .stat.accent { background: var(--accent-soft); }
+  .stat.danger { background: var(--danger-soft); }
+  .stat.gray { background: var(--gray-soft); }
+  .stat .label { font-size: 12px; color: var(--sub); }
+  .stat .num { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .stat .num small { font-size: 13px; font-weight: 500; margin-left: 2px; }
+  .stat .sub { font-size: 12px; color: var(--sub); }
+  .stat.accent .num { color: var(--accent); }
+  .stat.danger .num { color: var(--danger); }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .tabs button { border-radius: 999px; padding: 5px 14px; font-size: 13px; }
+  .tabs button.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.list th { text-align: left; font-size: 12px; color: var(--sub); font-weight: 500; padding: 6px; border-bottom: 1px solid var(--line); }
+  table.list th.n { text-align: right; }
+  table.list td { padding: 9px 6px; border-bottom: 1px dashed var(--line); vertical-align: middle; }
+  table.list td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.list td.qty { font-weight: 700; color: var(--main); }
+  .chip { display: inline-block; border-radius: 999px; padding: 1px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .chip.out { background: var(--danger-soft); color: var(--danger); }
+  .chip.now { background: var(--accent-soft); color: var(--accent); }
+  .chip.soon { background: var(--warn-soft); color: var(--warn); }
+  .chip.ok { background: var(--main-soft); color: var(--main); }
+  .empty { color: var(--sub); text-align: center; padding: 24px 0; }
+  .two { display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; }
+  .form { display: grid; gap: 10px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
+  .seg button { border: 0; border-radius: 0; padding: 6px 14px; font-size: 13px; }
+  .seg button.on { background: var(--main); color: #fff; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+  .toast { color: var(--main); font-size: 13px; font-weight: 700; }
+  .add { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 8px; align-items: end; }
+  .add label { font-size: 12px; color: var(--sub); }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--main); font-weight: 600; }
+  .note { font-size: 12px; color: var(--sub); margin-top: 12px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  footer { margin-top: 24px; font-size: 12px; color: var(--sub); text-align: center; }
+  @media (max-width: 760px) {
+    .settings { grid-template-columns: 1fr 1fr; }
+    .settings > div:first-child { grid-column: 1 / -1; }
+    .summary { grid-template-columns: 1fr 1fr; }
+    .two { grid-template-columns: 1fr; }
+    .add { grid-template-columns: 1fr 1fr; }
+    table.list .hide-sp { display: none; }
+    table.list td:first-child { word-break: break-all; }
+    table.list td, table.list th { padding-left: 4px; padding-right: 4px; }
+    .stat .num { font-size: 22px; }
+  }
+  @media print {
+    body { background: #fff; } .toolbar, button, .tabs, details { display: none !important; }
+    .card { break-inside: avoid; border-color: #bbb; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>在庫・発注アラート<span class="badge">デモ</span></h1>
+    <p>売れるペースと仕入れにかかる日数から「今すぐ発注すべき商品」を自動で拾い出し、発注メールと商品説明文まで作ります。</p>
+  </header>
+
+  <section class="card">
+    <h2>ショップの設定</h2>
+    <p class="hint">発注メールと発注タイミングの計算に使います。お店に合わせて変えられます。</p>
+    <div class="settings">
+      <div><label for="cName">店名</label><input id="cName" type="text"></div>
+      <div><label for="cSafety">安全在庫の日数（余裕を持たせる日数）</label><input id="cSafety" type="number" min="0" step="1" inputmode="numeric"></div>
+      <div><label for="cCover">発注で何日分を補充するか</label><input id="cCover" type="number" min="1" step="1" inputmode="numeric"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>いま手を打ちたい商品</h2>
+    <div class="summary">
+      <div class="stat"><div class="label">登録している商品</div><div class="num" id="sAll">0<small>件</small></div><div class="sub" id="sAllSub"></div></div>
+      <div class="stat accent"><div class="label">今すぐ発注</div><div class="num" id="sNow">0<small>件</small></div><div class="sub" id="sNowSub"></div></div>
+      <div class="stat danger"><div class="label">欠品中</div><div class="num" id="sOut">0<small>件</small></div><div class="sub" id="sOutSub"></div></div>
+      <div class="stat gray"><div class="label">今日発注しても、入荷前に欠品しそうな売上</div><div class="num" id="sLost">0<small>円</small></div><div class="sub" id="sLostSub"></div></div>
+    </div>
+    <p class="note">欠品しそうな売上 ＝ 商品ごとに「(仕入れ日数 − 在庫があと何日もつか) × 1日の販売数 × 販売単価」の合計（マイナスは0）。今日発注しても入荷までに売り切れてしまう分の目安です。</p>
+  </section>
+
+  <section class="card">
+    <h2>商品一覧</h2>
+    <p class="hint">手を打つ優先度の高い順に並んでいます（欠品中 → 今すぐ発注 → そろそろ → 十分。同じ状態なら在庫の残り日数が少ない順）。</p>
+    <div class="tabs" id="tabs"></div>
+    <table class="list">
+      <thead><tr><th>商品名</th><th class="n">在庫</th><th class="n hide-sp">1日の販売</th><th class="n">あと</th><th class="n hide-sp">発注点</th><th>状態</th><th class="n">推奨発注</th><th class="hide-sp"></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <details>
+      <summary>＋ 商品を追加する</summary>
+      <div class="add" style="margin-top:10px">
+        <div><label for="aName">商品名</label><input id="aName" type="text" placeholder="例）国産ひのきのまな板"></div>
+        <div><label for="aStock">現在庫</label><input id="aStock" type="number" min="0" step="1" inputmode="numeric" value="0"></div>
+        <div><label for="aSold">直近30日の販売数</label><input id="aSold" type="number" min="0" step="1" inputmode="numeric" value="0"></div>
+        <div><label for="aLead">仕入れ日数</label><input id="aLead" type="number" min="0" step="1" inputmode="numeric" value="7"></div>
+        <div><label for="aPrice">販売単価（円）</label><input id="aPrice" type="number" min="0" step="100" inputmode="numeric" value="0"></div>
+        <button class="primary" id="addBtn" type="button">追加</button>
+      </div>
+    </details>
+    <details>
+      <summary>＋ 在庫表をまとめて取り込む（Excel・CSVから貼り付け）</summary>
+      <p class="hint" style="margin-top:8px">1行に1商品、「商品名, 現在庫, 直近30日の販売数, 仕入れ日数, 販売単価」の順。Excelからコピーしたもの（タブ区切り）でも読めます。カンマ区切りのときは、金額に「,」を付けないでください。</p>
+      <textarea id="csv" rows="4" placeholder="国産ひのきのまな板, 12, 45, 10, 3800"></textarea>
+      <div class="actions"><button class="primary" id="csvBtn" type="button">取り込む</button><span class="toast" id="csvMsg"></span></div>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>発注メール</h2>
+    <p class="hint">「欠品中」「今すぐ発注」の商品と推奨数を、仕入れ先に送る文面にまとめました。</p>
+    <textarea id="mail" rows="12" aria-label="発注メール"></textarea>
+    <div class="actions">
+      <button class="primary" id="mailCopy" type="button">文面をコピー</button>
+      <span class="toast" id="mailToast"></span>
+    </div>
+    <p class="note">推奨発注数 ＝ 1日の販売数 ×（仕入れ日数 ＋ 補充日数）− 現在庫（切り上げ）。入荷までに売れる分も含めた数です。送る前に数量をご確認ください。</p>
+  </section>
+
+  <section class="card" id="descCard">
+    <h2>商品説明文をつくる</h2>
+    <p class="hint">商品を選んで特徴を3つ入れると、ネットショップ用の説明文ができます。</p>
+    <div class="two">
+      <div class="form">
+        <div><label for="dItem">商品</label><select id="dItem"></select></div>
+        <div><label for="dF1">特徴 1</label><input id="dF1" type="text" placeholder="例）国産ひのき100％"></div>
+        <div><label for="dF2">特徴 2</label><input id="dF2" type="text" placeholder="例）抗菌性が高く、においが付きにくい"></div>
+        <div><label for="dF3">特徴 3</label><input id="dF3" type="text" placeholder="例）職人が一枚ずつ仕上げ"></div>
+        <div><label for="dTarget">おすすめしたい人</label><input id="dTarget" type="text" placeholder="例）毎日料理をする方"></div>
+      </div>
+      <div>
+        <div class="seg" id="dSeg"></div>
+        <textarea id="dText" rows="10" aria-label="商品説明文"></textarea>
+        <div class="actions">
+          <button class="primary" id="dCopy" type="button">文面をコピー</button>
+          <span class="toast" id="dToast"></span>
+        </div>
+        <p class="note">文面は自由に書き換えられます。掲載前に、表現が景品表示法などに触れていないかご確認ください。</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <button id="sample" type="button">サンプルデータに戻す</button>
+    <button id="clear" type="button">商品をすべて消す</button>
+    <button id="print" type="button">一覧を印刷</button>
+  </div>
+
+  <footer>
+    入力した内容は、この端末のブラウザの中だけに保存されます。外部には一切送信されません。<br>
+    表示している商品・店名はすべて架空のサンプルです。<br>
+    © 合同会社ウルノワ ／ 無断での転載・再配布はご遠慮ください。
+  </footer>
+</div>
+
+<script>
+"use strict";
+const STORE_KEY = "ec-inventory-v1";
+const STATUS = {
+  out: { label: "欠品中", order: 0 },
+  now: { label: "今すぐ発注", order: 1 },
+  soon: { label: "そろそろ", order: 2 },
+  ok: { label: "十分", order: 3 }
+};
+// 「そろそろ」: 発注点に届くまでこの日数以内
+const SOON_MARGIN = 7;
+const DEFAULT_CFG = { name: "木と暮らしの道具店", safety: 7, cover: 30 };
+// サンプル: [商品名, 現在庫, 直近30日の販売数, 仕入れ日数, 販売単価, 特徴1〜3, おすすめの人]
+const SAMPLE = [
+  ["国産ひのきのまな板（M）", 14, 60, 10, 3800, ["国産ひのき100％", "水はけがよく、においが付きにくい", "職人が一枚ずつ仕上げ"], "毎日料理をする方"],
+  ["桐の米びつ 5kg", 0, 24, 21, 6800, ["湿気を通しにくい桐材", "米の鮮度を保ちやすい", "計量カップ付き"], "お米をおいしく保存したい方"],
+  ["竹の菜箸 3膳セット", 85, 90, 14, 1200, ["国産の孟宗竹", "先が細く、盛り付けがしやすい", "軽くて手が疲れにくい"], "揚げ物や盛り付けをよくする方"],
+  ["ブナのカッティングボード", 25, 18, 30, 5400, ["反りにくいブナ材", "そのまま食卓に出せるデザイン", "ひとつずつ異なる木目"], "おもてなしが好きな方"],
+  ["木製スパイスラック", 40, 12, 14, 4200, ["組み立て不要", "調味料が一目でわかる2段式", "壁掛けにも対応"], "キッチンを片付けたい方"],
+  ["ひのきの石けん置き", 45, 75, 7, 900, ["水切れのよいすのこ構造", "ひのきの香り", "丸洗いできる"], "浴室を清潔に保ちたい方"],
+  ["天然木のお弁当箱", 3, 30, 20, 4800, ["余分な水分を吸うので、ご飯がべたつきにくい", "軽くて丈夫", "漆仕上げ"], "毎日お弁当を作る方"],
+  ["木のおもちゃ 積み木30ピース", 58, 36, 25, 5500, ["角を丸く仕上げた安心設計", "植物性オイル仕上げ", "収納箱付き"], "小さなお子さまへの贈り物に"],
+  ["くるみのバターナイフ", 120, 45, 14, 1600, ["バターが伸ばしやすい薄い刃先", "くるみ材のやさしい手触り", "ギフト箱入り"], "朝食をていねいに楽しみたい方"],
+  ["杉のコースター 4枚組", 9, 40, 10, 1400, ["吸水性が高い杉材", "結露でテーブルが濡れにくい", "名入れ対応"], "来客の多いご家庭に"],
+  ["木製ハンガー 5本組", 200, 20, 14, 3000, ["型崩れしにくい厚みのある肩", "ひのきの防虫効果", "すべり止め付き"], "大切な服を長く着たい方"],
+  ["ひのきのお風呂の椅子", 5, 9, 45, 12000, ["国産ひのきの一枚板", "腰に負担の少ない高さ", "職人の手組み"], "お風呂時間を大切にしたい方"]
+];
+
+// ---- 純粋関数 ----
+const ceil = n => Math.ceil(n - 1e-9);
+const yen = n => Math.round(n).toLocaleString("ja-JP");
+const num = v => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : 0; };
+
+function metrics(p, cfg) {
+  const stock = num(p.stock), daily = num(p.sold30) / 30, lead = num(p.lead), safety = num(cfg.safety), cover = num(cfg.cover);
+  const daysLeft = daily > 0 ? stock / daily : Infinity;
+  const reorderDays = lead + safety;
+  const reorderPoint = daily * reorderDays;
+  let st = "ok";
+  if (stock <= 0) st = "out";
+  else if (daily > 0 && stock <= reorderPoint) st = "now";
+  else if (daily > 0 && daysLeft < reorderDays + SOON_MARGIN) st = "soon";
+  const suggest = st === "ok" || st === "soon" ? 0 : Math.max(0, ceil(daily * (lead + cover) - stock));
+  const lost = daily > 0 ? Math.max(0, lead - daysLeft) * daily * num(p.price) : 0;
+  return { stock, daily, daysLeft, reorderDays, reorderPoint, st, suggest, lost };
+}
+function sortProducts(list, cfg) {
+  return list.map(p => Object.assign({ p }, metrics(p, cfg)))
+    .sort((a, b) => (STATUS[a.st].order - STATUS[b.st].order) || (a.daysLeft - b.daysLeft) || (b.daily - a.daily));
+}
+function summarize(list, cfg) {
+  const r = { all: list.length, out: 0, now: 0, soon: 0, ok: 0, lost: 0, units: 0 };
+  for (const p of list) {
+    const m = metrics(p, cfg);
+    r[m.st]++; r.lost += m.lost; r.units += m.suggest;
+  }
+  return r;
+}
+function orderMail(list, cfg, today) {
+  const items = sortProducts(list, cfg).filter(x => x.st === "out" || x.st === "now");
+  if (!items.length) return "いま発注が必要な商品はありません。";
+  const lines = items.map(x => `・${x.p.name}　${x.suggest}個` + (x.st === "out" ? "（欠品中のため、できるだけ早い納品を希望します）" : ""));
+  return `〇〇株式会社\nご担当者様\n\nいつもお世話になっております。${cfg.name || "当店"}です。\n` +
+    `下記のとおり発注いたします。\n\n${lines.join("\n")}\n\n` +
+    `発注日：${today}\n` +
+    `納期のご回答と、在庫が不足している商品があればお知らせいただけますと幸いです。\n` +
+    `どうぞよろしくお願いいたします。\n\n${cfg.name || "当店"}`;
+}
+function describe(p, input, style) {
+  const f = (input.features || []).map(s => String(s || "").trim()).filter(Boolean);
+  const target = String(input.target || "").trim();
+  const name = p ? p.name : "この商品";
+  if (style === "short") {
+    const head = f[0] ? `【${f[0]}】` : "";
+    const rest = f.slice(1).join("／");
+    return `${head}${name}${rest ? "｜" + rest : ""}${target ? "｜" + target + "におすすめ" : ""}`;
+  }
+  const points = f.length ? f.map((s, i) => `■ ポイント${i + 1}：${s}`).join("\n") : "■ ポイント：（特徴を入力してください）";
+  return `${name}\n\n` +
+    (target ? `${target}に、ぜひ使っていただきたい一品です。\n` : "") +
+    `毎日の暮らしの中で、手に取るたびにうれしくなる道具をお届けします。\n\n` +
+    `${points}\n\n` +
+    `天然素材のため、木目や色合いは一つひとつ異なります。世界にひとつだけの風合いをお楽しみください。\n` +
+    `ギフトのご相談も承ります。お気軽にお問い合わせください。`;
+}
+function parseImport(text) {
+  const out = [], bad = [];
+  String(text || "").split(/\r?\n/).forEach((line, i) => {
+    if (!line.trim()) return;
+    // タブを含む行（Excelからのコピー）はタブで区切り、数値の桁区切りカンマを許す
+    const tab = line.includes("\t");
+    const f = line.split(tab ? /\t/ : /,|、/).map((s, k) => { s = s.trim(); return k ? s.replace(/[円個¥￥]/g, "").replace(tab ? /,/g : /$^/, "") : s; });
+    const nums = f.slice(1, 5).map(s => s === "" ? NaN : Number(s));
+    if (!f[0] || !Number.isFinite(nums[0]) || nums[0] < 0 || !Number.isFinite(nums[1]) || nums[1] < 0) { bad.push(i + 1); return; }
+    out.push({ name: f[0], stock: nums[0], sold30: nums[1],
+      lead: Number.isFinite(nums[2]) && nums[2] >= 0 ? nums[2] : 7, price: Number.isFinite(nums[3]) && nums[3] >= 0 ? nums[3] : 0,
+      features: ["", "", ""], target: "" });
+  });
+  return { out, bad };
+}
+function sampleProducts() {
+  return SAMPLE.map(([name, stock, sold30, lead, price, features, target]) => ({ name, stock, sold30, lead, price, features: features.slice(), target }));
+}
+const todayStr = () => { const d = new Date(); return d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate(); };
+const fmtDays = d => d === Infinity ? "―" : d < 1 ? "1日未満" : Math.floor(d) + "日";
+const fmt1 = n => (Math.round(n * 10) / 10).toLocaleString("ja-JP");
+
+// ---- 画面 ----
+let state = null, filter = "need", dIndex = 0, dStyle = "long";
+const $ = id => document.getElementById(id);
+function el(tag, props, children) {
+  const e = document.createElement(tag);
+  Object.assign(e, props || {});
+  (children || []).forEach(c => e.append(c));
+  return e;
+}
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (s && Array.isArray(s.products) && s.cfg) return s;
+  } catch (e) {}
+  return null;
+}
+function cfg() {
+  const c = state.cfg, n = (v, d) => { const x = Number(v); return Number.isFinite(x) && x >= 0 && v !== "" ? x : d; };
+  return { name: c.name, safety: n(c.safety, DEFAULT_CFG.safety), cover: Math.max(1, n(c.cover, DEFAULT_CFG.cover)) };
+}
+function setStat(id, value, unit) { $(id).replaceChildren(value, el("small", { textContent: unit })); }
+
+const TABS = [["need", "手を打つ商品"], ["out", "欠品中"], ["now", "今すぐ発注"], ["soon", "そろそろ"], ["ok", "十分"], ["all", "すべて"]];
+function render() {
+  const c = cfg(), r = summarize(state.products, c);
+  setStat("sAll", r.all, "件"); $("sAllSub").textContent = "そろそろ " + r.soon + "件 ／ 十分 " + r.ok + "件";
+  setStat("sNow", r.now, "件"); $("sNowSub").textContent = "在庫が発注点（仕入れ日数＋安全" + c.safety + "日分）以下";
+  setStat("sOut", r.out, "件"); $("sOutSub").textContent = "在庫が0の商品";
+  setStat("sLost", yen(r.lost), "円"); $("sLostSub").textContent = "発注が遅れた分の機会損失の目安";
+
+  $("tabs").replaceChildren(...TABS.map(([k, label]) => {
+    const b = el("button", { type: "button", textContent: label, className: k === filter ? "on" : "" });
+    b.addEventListener("click", () => { filter = k; render(); });
+    return b;
+  }));
+  const rows = sortProducts(state.products, c).filter(x =>
+    filter === "all" ? true : filter === "need" ? x.st !== "ok" : x.st === filter);
+  $("rows").replaceChildren(...(rows.length ? rows.map(x => {
+    const i = state.products.indexOf(x.p);
+    const del = el("button", { type: "button", className: "small", textContent: "削除", ariaLabel: x.p.name + "を削除" });
+    del.addEventListener("click", () => {
+      if (!confirm(x.p.name + " を一覧から削除します。よろしいですか？")) return;
+      state.products.splice(i, 1); dIndex = Math.min(dIndex, Math.max(0, state.products.length - 1)); save(); render(); renderDesc();
+    });
+    return el("tr", {}, [
+      el("td", { textContent: x.p.name }), el("td", { className: "n", textContent: x.stock + "個" }),
+      el("td", { className: "n hide-sp", textContent: fmt1(x.daily) + "個" }), el("td", { className: "n", textContent: fmtDays(x.daysLeft) }),
+      el("td", { className: "n hide-sp", textContent: ceil(x.reorderPoint) + "個" }),
+      el("td", {}, [el("span", { className: "chip " + x.st, textContent: STATUS[x.st].label })]),
+      el("td", { className: "n qty", textContent: x.suggest ? x.suggest + "個" : "―" }),
+      el("td", { className: "n hide-sp" }, [del])]);
+  }) : [el("tr", {}, [el("td", { colSpan: 8, className: "empty", textContent: "該当する商品はありません。" })])]));
+  $("mail").value = orderMail(state.products, c, todayStr());
+  $("mailToast").textContent = "";
+}
+
+function renderDesc() {
+  const sel = $("dItem");
+  sel.replaceChildren(...state.products.map((p, i) => el("option", { value: String(i), textContent: p.name })));
+  const p = state.products[dIndex];
+  sel.disabled = !p;
+  if (p) sel.value = String(dIndex);
+  const f = (p && p.features) || ["", "", ""];
+  $("dF1").value = f[0] || ""; $("dF2").value = f[1] || ""; $("dF3").value = f[2] || "";
+  $("dTarget").value = (p && p.target) || "";
+  renderDescText();
+}
+function renderDescText() {
+  const p = state.products[dIndex];
+  $("dSeg").replaceChildren(...[["long", "商品ページ用（長め）"], ["short", "商品タイトル用（短め）"]].map(([k, label]) => {
+    const b = el("button", { type: "button", textContent: label, className: k === dStyle ? "on" : "" });
+    b.addEventListener("click", () => { dStyle = k; renderDescText(); });
+    return b;
+  }));
+  $("dText").value = p ? describe(p, { features: [$("dF1").value, $("dF2").value, $("dF3").value], target: $("dTarget").value }, dStyle) : "商品を登録すると、説明文が作れます。";
+  $("dText").rows = dStyle === "short" ? 3 : 12;
+  $("dToast").textContent = "";
+}
+
+async function copy(id, toastId) {
+  const t = $(id);
+  try { await navigator.clipboard.writeText(t.value); } catch (e) { t.select(); document.execCommand("copy"); }
+  $(toastId).textContent = "コピーしました";
+}
+
+function init() {
+  state = load() || { cfg: Object.assign({}, DEFAULT_CFG), products: sampleProducts() };
+  const bind = (id, key) => {
+    $(id).value = state.cfg[key];
+    $(id).addEventListener("input", () => { state.cfg[key] = $(id).value; save(); render(); });
+  };
+  bind("cName", "name"); bind("cSafety", "safety"); bind("cCover", "cover");
+  $("addBtn").addEventListener("click", () => {
+    const name = $("aName").value.trim();
+    if (!name) { alert("商品名を入れてください。"); return; }
+    const v = id => Math.max(0, Number($(id).value) || 0);
+    state.products.push({ name, stock: v("aStock"), sold30: v("aSold"), lead: v("aLead"), price: v("aPrice"), features: ["", "", ""], target: "" });
+    $("aName").value = ""; filter = "all"; save(); render(); renderDesc();
+  });
+  $("csvBtn").addEventListener("click", () => {
+    const { out, bad } = parseImport($("csv").value);
+    state.products.push(...out); save(); filter = "all"; render(); renderDesc();
+    $("csvMsg").textContent = out.length + "件を取り込みました" + (bad.length ? "（読めなかった行: " + bad.join(", ") + "行目）" : "");
+    if (out.length) $("csv").value = "";
+  });
+  $("mailCopy").addEventListener("click", () => copy("mail", "mailToast"));
+  $("dCopy").addEventListener("click", () => copy("dText", "dToast"));
+  $("dItem").addEventListener("change", () => { dIndex = Number($("dItem").value); renderDesc(); });
+  ["dF1", "dF2", "dF3", "dTarget"].forEach(id => $(id).addEventListener("input", () => {
+    const p = state.products[dIndex]; if (!p) return;
+    p.features = [$("dF1").value, $("dF2").value, $("dF3").value]; p.target = $("dTarget").value;
+    save(); renderDescText();
+  }));
+  $("sample").addEventListener("click", () => {
+    if (!confirm("サンプルデータに戻します。入力した商品は消えます。よろしいですか？")) return;
+    state = { cfg: Object.assign({}, DEFAULT_CFG), products: sampleProducts() };
+    $("cName").value = state.cfg.name; $("cSafety").value = state.cfg.safety; $("cCover").value = state.cfg.cover;
+    filter = "need"; dIndex = 0; save(); render(); renderDesc();
+  });
+  $("clear").addEventListener("click", () => {
+    if (!confirm("商品をすべて消します。よろしいですか？")) return;
+    state.products = []; dIndex = 0; save(); render(); renderDesc();
+  });
+  $("print").addEventListener("click", () => window.print());
+  render(); renderDesc();
+}
+if (typeof document !== "undefined") init();
+if (typeof module !== "undefined") module.exports = { metrics, sortProducts, summarize, orderMail, describe, parseImport, sampleProducts, DEFAULT_CFG };
+</script>
+</body>
+</html>

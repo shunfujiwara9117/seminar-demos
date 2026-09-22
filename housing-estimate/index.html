@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>見積・追客ボード</title>
+<style>
+  :root {
+    --ink: #1d2733; --sub: #5b6b7c; --line: #dfe5ec; --bg: #f5f7fa; --card: #fff;
+    --main: #0f6e6e; --main-soft: #e3f3f2; --accent: #d9662b; --accent-soft: #fdeee5;
+    --warn: #b7791f; --warn-soft: #fdf6e3; --gray-soft: #eef1f4;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif; font-size: 15px; line-height: 1.6; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 20px 16px 60px; }
+  header h1 { font-size: 26px; margin: 8px 0 4px; letter-spacing: .02em; }
+  header p { margin: 0; color: var(--sub); }
+  .badge { display: inline-block; background: var(--sub); color: #fff; border-radius: 999px;
+    font-size: 12px; padding: 1px 10px; margin-left: 6px; vertical-align: 6px; font-weight: 500; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-top: 18px; }
+  .card h2 { font-size: 18px; margin: 0 0 4px; }
+  .card .hint { color: var(--sub); font-size: 13px; margin: 0 0 12px; }
+  select, input[type=text], input[type=number], input[type=date], textarea {
+    font: inherit; color: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: #fff; width: 100%; min-width: 0; }
+  input[type=number] { text-align: right; }
+  textarea { resize: vertical; line-height: 1.7; }
+  select:focus, input:focus, textarea:focus { outline: 2px solid var(--main); outline-offset: 0; border-color: var(--main); }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 8px 14px; color: var(--ink); }
+  button.primary { background: var(--main); border-color: var(--main); color: #fff; font-weight: 600; }
+  button.accent { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+  button.small { padding: 4px 10px; font-size: 13px; }
+  .views { display: flex; gap: 8px; margin-top: 18px; }
+  .views button { flex: 1; padding: 12px; font-weight: 700; font-size: 16px; }
+  .views button.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .settings { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 12px; }
+  label.lb, .settings label { font-size: 12px; color: var(--sub); display: block; }
+  .two { display: grid; grid-template-columns: 1fr 1.6fr; gap: 12px; }
+  .row { display: grid; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px dashed var(--line); }
+  .row.line { grid-template-columns: 2.2fr .7fr 1fr 1fr auto; }
+  .row.mst { grid-template-columns: 2.2fr .7fr 1fr auto; }
+  .row.head { border-top: 0; color: var(--sub); font-size: 12px; padding-bottom: 0; }
+  .row .calc { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  button.add { border-color: var(--main); color: var(--main); font-weight: 600; margin-top: 10px; }
+  .f { display: block; min-width: 0; }
+  .f > span { display: none; font-size: 11px; color: var(--sub); }
+  /* 見積書（プレビュー兼印刷） */
+  .sheet { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 32px 36px; margin-top: 18px; }
+  .sheet h3 { text-align: center; font-size: 26px; letter-spacing: .5em; margin: 0 0 18px; }
+  .sheet .meta { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .sheet .to { font-size: 20px; border-bottom: 1px solid var(--ink); padding-bottom: 2px; min-width: 50%; }
+  .sheet .nums { font-size: 13px; text-align: right; }
+  .sheet .subject { margin-top: 12px; }
+  .sheet .grand { margin: 14px 0; display: flex; align-items: baseline; gap: 16px; border-bottom: 3px double var(--ink); padding-bottom: 4px; flex-wrap: wrap; }
+  .sheet .grand b { font-size: 28px; font-variant-numeric: tabular-nums; }
+  .sheet .from { text-align: right; font-size: 14px; margin-top: 4px; }
+  table.items { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 14px; }
+  table.items th { background: var(--gray-soft); font-weight: 600; font-size: 12px; padding: 6px; text-align: left; border: 1px solid var(--line); }
+  table.items td { padding: 6px; border: 1px solid var(--line); }
+  table.items td.n, table.items th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.tot { margin: 12px 0 0 auto; border-collapse: collapse; font-size: 14px; min-width: 280px; }
+  table.tot td { padding: 5px 8px; border-bottom: 1px solid var(--line); }
+  table.tot td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  table.tot tr.total td { font-weight: 700; font-size: 16px; border-bottom: 2px solid var(--ink); }
+  .sheet .remarks { margin-top: 18px; font-size: 12px; color: var(--sub); }
+  /* 追客リスト */
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .stat { border-radius: 10px; padding: 14px; background: var(--main-soft); }
+  .stat.accent { background: var(--accent-soft); }
+  .stat.warn { background: var(--warn-soft); }
+  .stat.gray { background: var(--gray-soft); }
+  .stat .label { font-size: 12px; color: var(--sub); }
+  .stat .num { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .stat .num small { font-size: 13px; font-weight: 500; margin-left: 2px; }
+  .stat .sub { font-size: 12px; color: var(--sub); }
+  .stat.accent .num { color: var(--accent); }
+  .stat.warn .num { color: var(--warn); }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .tabs button { border-radius: 999px; padding: 5px 14px; font-size: 13px; }
+  .tabs button.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.list th { text-align: left; font-size: 12px; color: var(--sub); font-weight: 500; padding: 6px; border-bottom: 1px solid var(--line); }
+  table.list td { padding: 9px 6px; border-bottom: 1px dashed var(--line); vertical-align: middle; }
+  table.list td.n, table.list th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.list tr.sel td { background: var(--main-soft); }
+  table.list tr.closed td { color: var(--sub); }
+  .chip { display: inline-block; border-radius: 999px; padding: 1px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .chip.ok { background: var(--main-soft); color: var(--main); }
+  .chip.call { background: var(--warn-soft); color: var(--warn); }
+  .chip.expiring { background: var(--accent-soft); color: var(--accent); }
+  .chip.stale { background: #f6e3e3; color: #a33a3a; }
+  .chip.won { background: var(--main); color: #fff; }
+  .chip.lost { background: var(--gray-soft); color: var(--sub); }
+  .subtxt { font-size: 12px; color: var(--sub); display: block; }
+  .subtxt.sp-only { display: none; }
+  .empty { color: var(--sub); text-align: center; padding: 24px 0; }
+  .msg { display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; }
+  .msg .who { font-size: 20px; font-weight: 700; }
+  .msg dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; margin: 10px 0 0; }
+  .msg dt { color: var(--sub); }
+  .msg dd { margin: 0; }
+  .msg-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+  .toast { color: var(--main); font-size: 13px; font-weight: 700; }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--main); font-weight: 600; }
+  .note { font-size: 12px; color: var(--sub); margin-top: 12px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  footer { margin-top: 24px; font-size: 12px; color: var(--sub); text-align: center; }
+  @media (max-width: 760px) {
+    .settings, .summary { grid-template-columns: 1fr 1fr; }
+    .settings > div:first-child { grid-column: 1 / -1; }
+    .two, .msg { grid-template-columns: 1fr; }
+    .row.line { grid-template-columns: 1fr 1fr; }
+    .row.line > .f:first-child { grid-column: 1 / -1; }
+    .row.mst { grid-template-columns: 1fr 1fr; }
+    .row.mst > .f:first-child { grid-column: 1 / -1; }
+    .row.head { display: none; }
+    .row .calc { text-align: left; }
+    .f > span { display: block; }
+    .sheet { padding: 18px 14px; }
+    .sheet h3 { font-size: 20px; letter-spacing: .3em; }
+    .sheet .to { font-size: 17px; min-width: 100%; }
+    .sheet .nums { text-align: left; }
+    .sheet .grand b { font-size: 22px; }
+    table.items { font-size: 12px; }
+    table.items th, table.items td { padding: 4px; }
+    table.tot { min-width: 0; width: 100%; }
+    table.list .hide-sp { display: none; }
+    .subtxt.sp-only { display: block; }
+    table.list td, table.list th { padding-left: 4px; padding-right: 4px; }
+    .stat .num { font-size: 22px; }
+    .views button { font-size: 14px; padding: 10px 6px; }
+  }
+  @media print {
+    @page { size: A4 portrait; margin: 14mm; }
+    body { background: #fff; font-size: 13px; }
+    .wrap { padding: 0; max-width: none; }
+    header, footer, .views, .toolbar, button, .tabs, details { display: none !important; }
+    body[data-view="est"] #viewEst > :not(.sheet), body[data-view="est"] #viewList { display: none !important; }
+    body[data-view="est"] .sheet { border: 0; padding: 0; margin: 0; border-radius: 0; }
+    body[data-view="list"] #viewEst, body[data-view="list"] #msgCard { display: none !important; }
+    .card { break-inside: avoid; border-color: #bbb; }
+    table.items tr { break-inside: avoid; }
+  }
+</style>
+</head>
+<body data-view="est">
+<div class="wrap">
+  <header>
+    <h1>見積・追客ボード<span class="badge">デモ</span></h1>
+    <p>単価表から選ぶだけで見積書ができ、出した見積は「いつ・誰に連絡するか」まで自動で並びます。</p>
+  </header>
+
+  <div class="views" id="views">
+    <button type="button" data-v="est">① 見積書をつくる</button>
+    <button type="button" data-v="list">② 追客リスト</button>
+  </div>
+
+  <div id="viewEst">
+    <section class="card">
+      <h2>会社の設定</h2>
+      <p class="hint">見積書の表記と計算に使います。</p>
+      <div class="settings">
+        <div><label for="cName">会社名</label><input id="cName" type="text"></div>
+        <div><label for="cOver">諸経費率（%）</label><input id="cOver" type="number" min="0" step="1" inputmode="decimal"></div>
+        <div><label for="cTax">消費税率（%）</label><input id="cTax" type="number" min="0" step="1" inputmode="decimal"></div>
+        <div><label for="cValid">見積の有効期限（日）</label><input id="cValid" type="number" min="1" step="1" inputmode="numeric"></div>
+      </div>
+      <details>
+        <summary>工事メニューの単価表を編集する</summary>
+        <div class="row mst head"><div>工事メニュー</div><div>単位</div><div>単価（円）</div><div></div></div>
+        <div id="mstRows"></div>
+        <button class="add" id="addMst" type="button">＋ メニューを追加</button>
+      </details>
+    </section>
+
+    <section class="card">
+      <h2>見積の中身</h2>
+      <p class="hint">単価表からメニューを選んで数量を入れるだけ。金額はすべて自動で計算されます（円未満切り捨て）。</p>
+      <div class="two">
+        <div><label class="lb" for="eCust">お客様名</label><input id="eCust" type="text" placeholder="例）山田 一郎"></div>
+        <div><label class="lb" for="eTitle">工事名</label><input id="eTitle" type="text" placeholder="例）浴室リフォーム工事"></div>
+      </div>
+      <div class="row line head" style="margin-top:10px"><div>工事メニュー</div><div>数量</div><div>単価（円）</div><div>金額</div><div></div></div>
+      <div id="lineRows"></div>
+      <button class="add" id="addLine" type="button">＋ 行を追加</button>
+      <div class="toolbar">
+        <button class="primary" id="printEst" type="button">見積書を印刷／PDFで保存</button>
+        <button class="accent" id="register" type="button">この見積を追客リストに登録</button>
+        <button id="newEst" type="button">新しい見積にする</button>
+        <span class="toast" id="estToast"></span>
+      </div>
+    </section>
+
+    <section class="sheet" id="sheet">
+      <h3>御見積書</h3>
+      <div class="meta">
+        <div class="to" id="pTo"></div>
+        <div class="nums" id="pNums"></div>
+      </div>
+      <div class="subject" id="pSubject"></div>
+      <div class="grand"><span>御見積金額（税込）</span><b id="pGrand"></b></div>
+      <div class="from" id="pFrom"></div>
+      <table class="items">
+        <thead><tr><th>工事内容</th><th class="n">数量</th><th class="n">単価</th><th class="n">金額</th></tr></thead>
+        <tbody id="pItems"></tbody>
+      </table>
+      <table class="tot"><tbody id="pTot"></tbody></table>
+      <div class="remarks" id="pRemarks"></div>
+    </section>
+  </div>
+
+  <div id="viewList" hidden>
+    <section class="card">
+      <h2>追客の状況</h2>
+      <div class="summary">
+        <div class="stat"><div class="label">検討中の見積</div><div class="num" id="sOpen">0<small>件</small></div><div class="sub" id="sOpenSub"></div></div>
+        <div class="stat warn"><div class="label">今日連絡すべき</div><div class="num" id="sCall">0<small>件</small></div><div class="sub" id="sCallSub"></div></div>
+        <div class="stat accent"><div class="label">放置されている見積額</div><div class="num" id="sStale">0<small>円</small></div><div class="sub" id="sStaleSub"></div></div>
+        <div class="stat gray"><div class="label">成約率</div><div class="num" id="sWin">―</div><div class="sub" id="sWinSub"></div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>見積一覧</h2>
+      <p class="hint">連絡する優先度の高い順に並んでいます（期限が近い → 連絡が空いている → 放置 → 金額の大きい順）。「開く」で追客文が出ます。</p>
+      <div class="tabs" id="tabs"></div>
+      <table class="list">
+        <thead><tr><th>お客様</th><th class="hide-sp">工事名</th><th class="n">見積金額</th><th class="n hide-sp">提出</th><th class="n hide-sp">最終連絡</th><th>判定</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <details>
+        <summary>＋ 見積の一覧をまとめて取り込む（貼り付け）</summary>
+        <p class="hint" style="margin-top:8px">1行に1件、「お客様名, 工事名, 見積金額, 提出日, 状態, 最終連絡日」の順でカンマ区切り。状態（検討中／成約／失注）と最終連絡日は省略できます。Excelからコピーしたもの（タブ区切り）でも読めます。</p>
+        <textarea id="csv" rows="4" placeholder="山田 一郎, 浴室リフォーム, 1120000, 2026-09-01, 検討中, 2026-09-05"></textarea>
+        <div class="msg-actions"><button class="primary" id="csvBtn" type="button">取り込む</button><span class="toast" id="csvMsg"></span></div>
+      </details>
+    </section>
+
+    <section class="card" id="msgCard">
+      <h2>追客文</h2>
+      <div id="msgEmpty" class="empty">上の一覧から、連絡したい見積を選んでください。</div>
+      <div class="msg" id="msgBody" hidden>
+        <div>
+          <div class="who" id="mWho"></div>
+          <dl id="mInfo"></dl>
+          <div class="msg-actions">
+            <label class="lb" for="mStatus" style="margin:0">状態</label>
+            <select id="mStatus" style="width:auto"><option>検討中</option><option>成約</option><option>失注</option></select>
+            <button id="mDel" type="button" class="small">この見積を削除</button>
+          </div>
+        </div>
+        <div>
+          <div id="mKind" class="subtxt" style="margin-bottom:6px"></div>
+          <textarea id="mText" rows="9" aria-label="追客文"></textarea>
+          <div class="msg-actions">
+            <button class="primary" id="copyBtn" type="button">文面をコピー</button>
+            <button id="doneBtn" type="button">連絡した</button>
+            <span class="toast" id="mToast"></span>
+          </div>
+          <p class="note">文面は自由に書き換えられます。送る前に、内容が合っているかを必ずご確認ください。</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="toolbar">
+    <button id="sample" type="button">サンプルデータに戻す</button>
+    <button id="clear" type="button">見積と一覧をすべて消す</button>
+    <button id="printList" type="button">追客リストを印刷</button>
+  </div>
+
+  <footer>
+    入力した内容は、この端末のブラウザの中だけに保存されます。外部には一切送信されません。<br>
+    表示しているお客様・金額・単価はすべて架空のサンプルです。<br>
+    © 合同会社ウルノワ ／ 無断での転載・再配布はご遠慮ください。
+  </footer>
+</div>
+
+<script>
+"use strict";
+const STORE_KEY = "housing-estimate-v1";
+const OPEN = "検討中", WON = "成約", LOST = "失注";
+// 判定の目安（日）: 最終連絡からこの日数で「今日連絡」、この日数で「放置」、有効期限までこの日数で「期限間近」
+const CALL_DAYS = 7, STALE_DAYS = 30, EXPIRE_WARN = 7, THANKS_DAYS = 7;
+const KIND = {
+  expiring: { label: "期限間近", order: 0 },
+  call: { label: "要連絡", order: 1 },
+  stale: { label: "放置", order: 2 },
+  ok: { label: "様子見", order: 3 },
+  won: { label: "成約", order: 4 },
+  lost: { label: "失注", order: 5 }
+};
+const DEFAULT_CFG = { name: "みどりリフォーム株式会社", over: 10, tax: 10, valid: 30 };
+// 単価表（架空）: [工事メニュー, 単位, 単価]
+const SAMPLE_MASTER = [
+  ["浴室交換（ユニットバス）", "式", 850000], ["キッチン交換（システムキッチン）", "式", 780000], ["トイレ交換", "式", 220000],
+  ["洗面化粧台交換", "式", 180000], ["外壁塗装", "㎡", 3800], ["屋根塗装", "㎡", 3200], ["クロス張替", "㎡", 1500],
+  ["フローリング張替", "㎡", 9800], ["解体・撤去", "式", 80000], ["養生費", "式", 30000], ["廃材処分", "式", 40000]
+];
+const SAMPLE_EST = { cust: "山田 一郎", title: "浴室リフォーム工事", lines: [[0, 1], [3, 1], [8, 1], [9, 1], [10, 1]] };
+// サンプル案件: [お客様名, 工事名, 見積金額, 提出が何日前, 状態, 最終連絡が何日前]
+const SAMPLE_DEALS = [
+  ["佐藤 健二", "外壁・屋根塗装", 1480000, 25, OPEN, 10], ["鈴木 真理子", "浴室・洗面リフォーム", 1120000, 9, OPEN, 9],
+  ["高橋 誠", "キッチン交換", 935000, 3, OPEN, 3], ["田中 恵美", "全面クロス張替", 420000, 45, OPEN, 38],
+  ["伊藤 浩", "トイレ・洗面交換", 385000, 15, OPEN, 2], ["渡辺 由香", "フローリング張替", 620000, 60, OPEN, 52],
+  ["加藤 大輔", "屋根葺き替え", 2800000, 12, OPEN, 8], ["山本 和也", "外壁塗装", 1650000, 20, WON, 5],
+  ["中村 直美", "浴室交換", 980000, 40, WON, 30], ["小林 修", "キッチン・浴室", 2350000, 35, LOST, 20],
+  ["吉田 早苗", "玄関ドア交換", 450000, 50, WON, 40]
+];
+
+// ---- 純粋関数 ----
+const parseDate = s => { const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(s || "").trim().replace(/\//g, "-")); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : NaN; };
+const ymd = t => new Date(t).toISOString().slice(0, 10);
+const daysBetween = (from, to) => Math.round((parseDate(to) - parseDate(from)) / 86400000);
+const todayStr = () => { const d = new Date(); return ymd(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); };
+const addDays = (s, n) => ymd(parseDate(s) + n * 86400000);
+const nz = v => { const x = Number(v); return Number.isFinite(x) && x > 0 ? x : 0; };
+const yen = n => Math.round(n).toLocaleString("ja-JP");
+const jdate = s => { const t = parseDate(s); if (!Number.isFinite(t)) return ""; const d = new Date(t); return d.getUTCFullYear() + "年" + (d.getUTCMonth() + 1) + "月" + d.getUTCDate() + "日"; };
+
+// 見積の計算（各段階で円未満切り捨て）
+function calcEstimate(lines, cfg) {
+  const rows = lines.map(l => ({ name: l.name, unit: l.unit, qty: nz(l.qty), price: nz(l.price), amount: Math.floor(nz(l.qty) * nz(l.price)) }));
+  const subtotal = rows.reduce((a, r) => a + r.amount, 0);
+  const overhead = Math.floor(subtotal * nz(cfg.over) / 100);
+  const net = subtotal + overhead;
+  const tax = Math.floor(net * nz(cfg.tax) / 100);
+  return { rows, subtotal, overhead, net, tax, total: net + tax };
+}
+function quoteNo(today, seq) { return "Q" + today.replace(/-/g, "") + "-" + String(seq).padStart(2, "0"); }
+
+// 案件の判定
+function judge(d, today, cfg) {
+  if (d.status === WON) return { kind: "won" };
+  if (d.status === LOST) return { kind: "lost" };
+  const since = daysBetween(d.contacted || d.submitted, today);
+  const expiry = addDays(d.submitted, nz(cfg.valid) || DEFAULT_CFG.valid);
+  const toExpiry = daysBetween(today, expiry);
+  let kind = "ok";
+  if (toExpiry >= 0 && toExpiry <= EXPIRE_WARN) kind = "expiring";
+  else if (since >= STALE_DAYS) kind = "stale";
+  else if (since >= CALL_DAYS) kind = "call";
+  return { kind, since, expiry, toExpiry, age: daysBetween(d.submitted, today) };
+}
+function sortDeals(list, today, cfg) {
+  return list.map(d => ({ d, j: judge(d, today, cfg) }))
+    .sort((a, b) => (KIND[a.j.kind].order - KIND[b.j.kind].order) || (nz(b.d.amount) - nz(a.d.amount)));
+}
+function summarize(list, today, cfg) {
+  const r = { open: 0, openTotal: 0, call: 0, stale: 0, staleTotal: 0, won: 0, lost: 0, winRate: null };
+  for (const d of list) {
+    if (d.status === WON) { r.won++; continue; }
+    if (d.status === LOST) { r.lost++; continue; }
+    const j = judge(d, today, cfg);
+    r.open++; r.openTotal += nz(d.amount);
+    if (j.kind === "expiring" || j.kind === "call" || j.kind === "stale") r.call++;
+    if (j.since >= STALE_DAYS) { r.stale++; r.staleTotal += nz(d.amount); }
+  }
+  if (r.won + r.lost > 0) r.winRate = r.won / (r.won + r.lost);
+  return r;
+}
+const surname = name => String(name || "").trim().split(/[\s　]+/)[0] || "";
+function span(days) {
+  if (days < 14) return days + "日";
+  if (days < 60) return Math.round(days / 7) + "週間";
+  return Math.round(days / 30) + "か月";
+}
+// 追客文の種類: お礼（提出直後で未連絡）／期限前のお知らせ／検討状況伺い
+function messageType(d, today, cfg) {
+  const j = judge(d, today, cfg);
+  if (j.kind === "won" || j.kind === "lost") return null;
+  if (j.kind === "expiring" || j.toExpiry < 0) return "expire";
+  if (j.age <= THANKS_DAYS && daysBetween(d.submitted, d.contacted || d.submitted) <= 0) return "thanks";
+  return "follow";
+}
+function buildMessage(d, today, cfg) {
+  const type = messageType(d, today, cfg);
+  if (!type) return "";
+  const j = judge(d, today, cfg), who = surname(d.name) + "様", co = cfg.name || "弊社", title = d.title || "工事";
+  const head = `${who}\n\nいつもお世話になっております。${co}です。\n`;
+  const tail = `\n\n${co}`;
+  if (type === "thanks") return head +
+    `先日は「${title}」のお見積りをご依頼いただき、ありがとうございました。\n` +
+    `内容でわかりにくい点や、ご予算・時期に合わせた調整のご希望があれば、お気軽にお申し付けください。` + tail;
+  if (type === "expire") {
+    const body = j.toExpiry < 0
+      ? `以前お出しした「${title}」のお見積り（税込 ${yen(nz(d.amount))}円）は、${jdate(j.expiry)}で有効期限を過ぎております。\n` +
+        `ご希望があれば、最新の価格で改めてお見積りいたします。`
+      : `先日お出しした「${title}」のお見積り（税込 ${yen(nz(d.amount))}円）は、${jdate(j.expiry)}が有効期限となっております。\n` +
+        `期限を過ぎても再度お見積りいたしますが、資材価格の変動により金額が変わる場合がございます。`;
+    return head + body + `\nご検討状況はいかがでしょうか。ご質問があればお気軽にご連絡ください。` + tail;
+  }
+  return head +
+    `「${title}」のお見積りをお出ししてから${span(j.age)}ほど経ちましたが、その後ご検討状況はいかがでしょうか。\n` +
+    `工事時期のご相談や、ご予算に合わせたプランの組み直しも承ります。お気軽にご返信ください。` + tail;
+}
+function parseImport(text) {
+  const out = [], bad = [];
+  String(text || "").split(/\r?\n/).forEach((line, i) => {
+    if (!line.trim()) return;
+    // タブ区切り（Excelからのコピー）は金額の桁区切りカンマを残すため、タブだけで区切る
+    const f = line.split(line.includes("\t") ? /\t/ : /,|、/).map(s => s.trim());
+    const amount = Number(String(f[2] || "").replace(/[円¥￥,\s]/g, ""));
+    const sub = parseDate(f[3]);
+    if (!f[0] || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(sub)) { bad.push(i + 1); return; }
+    const status = [OPEN, WON, LOST].includes(f[4]) ? f[4] : OPEN;
+    const con = parseDate(f[5]);
+    out.push({ name: f[0], title: f[1] || "", amount, submitted: ymd(sub), status, contacted: Number.isFinite(con) ? ymd(con) : "" });
+  });
+  return { out, bad };
+}
+function sampleDeals(today) {
+  return SAMPLE_DEALS.map(([name, title, amount, sub, status, con]) =>
+    ({ name, title, amount, submitted: addDays(today, -sub), status, contacted: addDays(today, -con) }));
+}
+function sampleMaster() { return SAMPLE_MASTER.map(([name, unit, price]) => ({ name, unit, price })); }
+function sampleEstimate(master) {
+  return { cust: SAMPLE_EST.cust, title: SAMPLE_EST.title,
+    lines: SAMPLE_EST.lines.map(([i, qty]) => ({ name: master[i].name, unit: master[i].unit, price: master[i].price, qty })) };
+}
+function freshState(today) {
+  const master = sampleMaster();
+  return { cfg: Object.assign({}, DEFAULT_CFG), master, est: sampleEstimate(master), deals: sampleDeals(today), seq: 1, view: "est" };
+}
+
+// ---- 画面 ----
+let state = null, selected = -1, filter = "need";
+const $ = id => document.getElementById(id);
+function el(tag, props, children) {
+  const e = document.createElement(tag);
+  Object.assign(e, props || {});
+  (children || []).forEach(c => e.append(c));
+  return e;
+}
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (s && s.cfg && Array.isArray(s.master) && s.est && Array.isArray(s.deals)) return s;
+  } catch (e) {}
+  return null;
+}
+function cfg() {
+  const c = state.cfg;
+  return { name: c.name, over: nz(c.over), tax: nz(c.tax), valid: nz(c.valid) || DEFAULT_CFG.valid };
+}
+function field(label, control) { return el("label", { className: "f" }, [el("span", { textContent: label }), control]); }
+function setStat(id, value, unit) { $(id).replaceChildren(value, el("small", { textContent: unit })); }
+
+function renderView() {
+  document.body.dataset.view = state.view;
+  $("viewEst").hidden = state.view !== "est";
+  $("viewList").hidden = state.view !== "list";
+  [...$("views").children].forEach(b => b.classList.toggle("on", b.dataset.v === state.view));
+}
+
+function renderMaster() {
+  $("mstRows").replaceChildren(...state.master.map((m, i) => {
+    const name = el("input", { type: "text", value: m.name, ariaLabel: "工事メニュー" });
+    const unit = el("input", { type: "text", value: m.unit, ariaLabel: "単位" });
+    const price = el("input", { type: "number", min: "0", step: "100", inputMode: "numeric", value: m.price, ariaLabel: "単価" });
+    const del = el("button", { type: "button", className: "small", textContent: "削除" });
+    name.addEventListener("change", () => { m.name = name.value; save(); renderLines(); });
+    unit.addEventListener("input", () => { m.unit = unit.value; save(); });
+    price.addEventListener("input", () => { m.price = nz(price.value); save(); });
+    del.addEventListener("click", () => { state.master.splice(i, 1); save(); renderMaster(); renderLines(); });
+    return el("div", { className: "row mst" }, [field("工事メニュー", name), field("単位", unit), field("単価（円）", price), del]);
+  }));
+}
+
+function renderLines() {
+  const names = state.master.map(m => m.name);
+  $("lineRows").replaceChildren(...state.est.lines.map((l, i) => {
+    const sel = el("select", { ariaLabel: "工事メニュー" });
+    const opts = names.includes(l.name) ? names : [l.name].concat(names);
+    sel.replaceChildren(...opts.map(n => el("option", { value: n, textContent: n })));
+    sel.value = l.name;
+    const qty = el("input", { type: "number", min: "0", step: "0.1", inputMode: "decimal", value: l.qty, ariaLabel: "数量" });
+    const price = el("input", { type: "number", min: "0", step: "100", inputMode: "numeric", value: l.price, ariaLabel: "単価" });
+    const calc = el("div", { className: "calc" });
+    const del = el("button", { type: "button", className: "small", textContent: "削除", ariaLabel: "この行を削除" });
+    const upd = () => { calc.textContent = yen(Math.floor(nz(l.qty) * nz(l.price))) + " 円"; save(); renderSheet(); };
+    sel.addEventListener("change", () => {
+      const m = state.master.find(x => x.name === sel.value);
+      if (m) { l.name = m.name; l.unit = m.unit; l.price = m.price; }
+      save(); renderLines();
+    });
+    qty.addEventListener("input", () => { l.qty = qty.value; upd(); });
+    price.addEventListener("input", () => { l.price = price.value; upd(); });
+    del.addEventListener("click", () => { state.est.lines.splice(i, 1); save(); renderLines(); });
+    calc.textContent = yen(Math.floor(nz(l.qty) * nz(l.price))) + " 円";
+    return el("div", { className: "row line" }, [field("工事メニュー", sel), field("数量（" + (l.unit || "") + "）", qty), field("単価（円）", price), calc, del]);
+  }));
+  renderSheet();
+}
+
+function renderSheet() {
+  const today = todayStr(), c = cfg(), r = calcEstimate(state.est.lines, c);
+  $("pTo").textContent = (state.est.cust || "　　　　") + " 様";
+  $("pNums").replaceChildren(
+    el("div", { textContent: "見積番号：" + quoteNo(today, state.seq) }),
+    el("div", { textContent: "発行日：" + jdate(today) }),
+    el("div", { textContent: "有効期限：" + jdate(addDays(today, c.valid)) }));
+  $("pSubject").textContent = "件名：" + (state.est.title || "");
+  $("pGrand").textContent = "¥" + yen(r.total) + "-";
+  $("pFrom").textContent = c.name || "";
+  $("pItems").replaceChildren(...(r.rows.length ? r.rows.map(x => el("tr", {}, [
+    el("td", { textContent: x.name }), el("td", { className: "n", textContent: x.qty.toLocaleString("ja-JP") + " " + (x.unit || "") }),
+    el("td", { className: "n", textContent: yen(x.price) }), el("td", { className: "n", textContent: yen(x.amount) })]))
+    : [el("tr", {}, [el("td", { colSpan: 4, className: "empty", textContent: "行がありません" })])]));
+  const tr = (a, b, cls) => el("tr", { className: cls || "" }, [el("td", { textContent: a }), el("td", { textContent: b })]);
+  $("pTot").replaceChildren(tr("小計", yen(r.subtotal) + " 円"), tr("諸経費（" + c.over + "%）", yen(r.overhead) + " 円"),
+    tr("税抜合計", yen(r.net) + " 円"), tr("消費税（" + c.tax + "%）", yen(r.tax) + " 円"), tr("税込合計", yen(r.total) + " 円", "total"));
+  $("pRemarks").textContent = "※ 本見積の有効期限は発行日から" + c.valid + "日間です。現地調査の結果により、内容・金額が変わる場合がございます。";
+}
+
+const TABS = [["need", "今日連絡すべき"], ["expiring", "期限間近"], ["call", "要連絡"], ["stale", "放置"], ["ok", "様子見"], ["closed", "成約・失注"], ["all", "すべて"]];
+function renderList() {
+  const today = todayStr(), c = cfg(), r = summarize(state.deals, today, c);
+  setStat("sOpen", r.open, "件"); $("sOpenSub").textContent = "見積総額 " + yen(r.openTotal) + "円";
+  setStat("sCall", r.call, "件"); $("sCallSub").textContent = "期限間近＋連絡が" + CALL_DAYS + "日以上空いた見積";
+  setStat("sStale", yen(r.staleTotal), "円"); $("sStaleSub").textContent = r.stale + "件 ／ 最終連絡から" + STALE_DAYS + "日以上";
+  if (r.winRate === null) { $("sWin").textContent = "―"; $("sWinSub").textContent = "成約・失注の記録がまだありません"; }
+  else { setStat("sWin", Math.round(r.winRate * 100), "%"); $("sWinSub").textContent = "成約 " + r.won + "件 ÷（成約 " + r.won + " ＋ 失注 " + r.lost + "）"; }
+
+  $("tabs").replaceChildren(...TABS.map(([k, label]) => {
+    const b = el("button", { type: "button", textContent: label, className: k === filter ? "on" : "" });
+    b.addEventListener("click", () => { filter = k; renderList(); });
+    return b;
+  }));
+  const rows = sortDeals(state.deals, today, c).filter(x => {
+    const k = x.j.kind;
+    if (filter === "all") return true;
+    if (filter === "need") return k === "expiring" || k === "call" || k === "stale";
+    if (filter === "closed") return k === "won" || k === "lost";
+    return k === filter;
+  });
+  $("rows").replaceChildren(...(rows.length ? rows.map(x => {
+    const i = state.deals.indexOf(x.d), k = x.j.kind, closed = k === "won" || k === "lost";
+    const cell = el("td", {}, [el("span", { className: "chip " + k, textContent: KIND[k].label })]);
+    if (k === "expiring") cell.append(el("span", { className: "subtxt", textContent: x.j.toExpiry ? "期限まであと" + x.j.toExpiry + "日" : "今日が期限" }));
+    else if (!closed && x.j.since >= CALL_DAYS) cell.append(el("span", { className: "subtxt", textContent: x.j.since + "日連絡なし" }));
+    const open = el("button", { type: "button", className: "small" + (closed ? "" : " primary"), textContent: "開く" });
+    open.addEventListener("click", () => { selected = i; renderList(); $("msgCard").scrollIntoView({ behavior: "smooth", block: "start" }); });
+    const md = s => s ? s.slice(5).replace("-", "/") : "―";
+    return el("tr", { className: (i === selected ? "sel " : "") + (closed ? "closed" : "") }, [
+      el("td", {}, [x.d.name, el("span", { className: "subtxt sp-only", textContent: x.d.title })]),
+      el("td", { className: "hide-sp", textContent: x.d.title }),
+      el("td", { className: "n", textContent: yen(nz(x.d.amount)) + "円" }),
+      el("td", { className: "n hide-sp", textContent: md(x.d.submitted) }),
+      el("td", { className: "n hide-sp", textContent: md(x.d.contacted) }), cell, el("td", { className: "n" }, [open])]);
+  }) : [el("tr", {}, [el("td", { colSpan: 7, className: "empty", textContent: "該当する見積はありません。" })])]));
+  renderMsg(today, c);
+}
+
+function renderMsg(today, c) {
+  const d = state.deals[selected];
+  $("msgEmpty").hidden = !!d; $("msgBody").hidden = !d;
+  if (!d) return;
+  const j = judge(d, today, c), type = messageType(d, today, c);
+  $("mWho").textContent = d.name + " 様";
+  const info = [["工事名", d.title || "―"], ["見積金額", yen(nz(d.amount)) + "円（税込）"],
+    ["提出日", d.submitted.replace(/-/g, "/") + "（" + daysBetween(d.submitted, today) + "日前）"],
+    ["有効期限", j.expiry ? j.expiry.replace(/-/g, "/") + (j.toExpiry < 0 ? "（期限切れ）" : "（あと" + j.toExpiry + "日）") : "―"],
+    ["最終連絡", d.contacted ? d.contacted.replace(/-/g, "/") + "（" + daysBetween(d.contacted, today) + "日前）" : "まだ"],
+    ["判定", KIND[j.kind].label]];
+  $("mInfo").replaceChildren(...info.flatMap(([k, v]) => [el("dt", { textContent: k }), el("dd", { textContent: v })]));
+  $("mStatus").value = d.status;
+  $("mKind").textContent = { thanks: "文面の種類：提出後のお礼", expire: "文面の種類：有効期限のお知らせ", follow: "文面の種類：検討状況のお伺い" }[type] || "成約・失注の見積には追客文を出しません。";
+  $("mText").value = buildMessage(d, today, c);
+  $("mText").disabled = !type; $("copyBtn").disabled = !type; $("doneBtn").disabled = !type;
+  $("mToast").textContent = "";
+}
+
+function render() { renderView(); renderMaster(); renderLines(); renderList(); }
+
+function init() {
+  state = load() || freshState(todayStr());
+  const bind = (id, key) => {
+    $(id).value = state.cfg[key];
+    $(id).addEventListener("input", () => { state.cfg[key] = $(id).value; save(); renderSheet(); renderList(); });
+  };
+  bind("cName", "name"); bind("cOver", "over"); bind("cTax", "tax"); bind("cValid", "valid");
+  const bindEst = (id, key) => {
+    $(id).value = state.est[key];
+    $(id).addEventListener("input", () => { state.est[key] = $(id).value; save(); renderSheet(); });
+  };
+  bindEst("eCust", "cust"); bindEst("eTitle", "title");
+  [...$("views").children].forEach(b => b.addEventListener("click", () => { state.view = b.dataset.v; save(); renderView(); }));
+  $("addMst").addEventListener("click", () => { state.master.push({ name: "新しいメニュー" + (state.master.length + 1), unit: "式", price: 0 }); save(); renderMaster(); renderLines(); });
+  $("addLine").addEventListener("click", () => {
+    const m = state.master[0] || { name: "工事", unit: "式", price: 0 };
+    state.est.lines.push({ name: m.name, unit: m.unit, price: m.price, qty: 1 }); save(); renderLines();
+  });
+  $("printEst").addEventListener("click", () => { state.view = "est"; renderView(); window.print(); });
+  $("printList").addEventListener("click", () => { state.view = "list"; renderView(); window.print(); });
+  $("register").addEventListener("click", () => {
+    const r = calcEstimate(state.est.lines, cfg());
+    if (!state.est.cust.trim() || r.total <= 0) { alert("お客様名と、金額の入った行を入れてください。"); return; }
+    const today = todayStr();
+    state.deals.push({ name: state.est.cust.trim(), title: state.est.title.trim(), amount: r.total, submitted: today, status: OPEN, contacted: "" });
+    selected = state.deals.length - 1; state.seq++; filter = "all"; state.view = "list"; save(); render();
+    $("mToast").textContent = "追客リストに登録しました";
+    $("msgCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  $("newEst").addEventListener("click", () => {
+    if (!confirm("入力中の見積を消して、新しい見積にします。よろしいですか？")) return;
+    state.est = { cust: "", title: "", lines: [] }; $("eCust").value = ""; $("eTitle").value = ""; save(); renderLines();
+  });
+  $("csvBtn").addEventListener("click", () => {
+    const { out, bad } = parseImport($("csv").value);
+    state.deals.push(...out); save(); filter = "all"; renderList();
+    $("csvMsg").textContent = out.length + "件を取り込みました" + (bad.length ? "（読めなかった行: " + bad.join(", ") + "行目）" : "");
+    if (out.length) $("csv").value = "";
+  });
+  $("mStatus").addEventListener("change", () => { const d = state.deals[selected]; if (!d) return; d.status = $("mStatus").value; save(); renderList(); });
+  $("mDel").addEventListener("click", () => {
+    const d = state.deals[selected]; if (!d) return;
+    if (!confirm(d.name + "様の見積を一覧から削除します。よろしいですか？")) return;
+    state.deals.splice(selected, 1); selected = -1; save(); renderList();
+  });
+  $("copyBtn").addEventListener("click", async () => {
+    const t = $("mText");
+    try { await navigator.clipboard.writeText(t.value); } catch (e) { t.select(); document.execCommand("copy"); }
+    $("mToast").textContent = "コピーしました";
+  });
+  $("doneBtn").addEventListener("click", () => {
+    const d = state.deals[selected]; if (!d) return;
+    d.contacted = todayStr(); save(); renderList(); $("mToast").textContent = "連絡した日を記録しました";
+  });
+  $("sample").addEventListener("click", () => {
+    if (!confirm("サンプルデータに戻します。入力した見積・一覧・単価表は消えます。よろしいですか？")) return;
+    const view = state.view;
+    state = freshState(todayStr()); state.view = view;
+    ["cName", "cOver", "cTax", "cValid"].forEach((id, k) => { $(id).value = state.cfg[["name", "over", "tax", "valid"][k]]; });
+    $("eCust").value = state.est.cust; $("eTitle").value = state.est.title;
+    selected = -1; filter = "need"; save(); render();
+  });
+  $("clear").addEventListener("click", () => {
+    if (!confirm("見積の中身と追客リストをすべて消します（単価表は残ります）。よろしいですか？")) return;
+    state.est = { cust: "", title: "", lines: [] }; state.deals = []; $("eCust").value = ""; $("eTitle").value = "";
+    selected = -1; save(); render();
+  });
+  render();
+}
+if (typeof document !== "undefined") init();
+if (typeof module !== "undefined") module.exports = { calcEstimate, judge, sortDeals, summarize, messageType, buildMessage, parseImport, sampleDeals, sampleMaster, sampleEstimate, quoteNo, daysBetween, DEFAULT_CFG };
+</script>
+</body>
+</html>
